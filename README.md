@@ -26,7 +26,8 @@ paper results, please write to us so that we can investigate the issue.
  - Install PyTorch + others (`conda install pytorch torchvision torchaudio cudatoolkit=CUDA_VERSION -c pytorch -c conda-forge`)
  - Install PyTorch-Geometric (`conda install pyg -c pyg`)
  - Install hydra/graph-tool (`conda install hydra-core graph-tool -c conda-forge`) (I think this is where issues start?)
- - 
+ - Run `python dgd/hydra_main_test.py` to check hydra with non-digress packages
+ - Run `python dgd/hydra_main_test_with_digress.py` to check hydra with digress imports
 
 ## Download the data
 
