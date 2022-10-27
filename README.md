@@ -1,3 +1,6 @@
+# Mirror of Digress by neutralpronoun
+## Adapation in progress for synthetic social network generation
+
 # Denoising diffusion models for graph generation
 
 Warning 1: when running the code, you might encounter an `AttributeError cls._old_init`. This is a non deterministic
