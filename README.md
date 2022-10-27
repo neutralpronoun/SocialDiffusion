@@ -16,6 +16,15 @@ paper results, please write to us so that we can investigate the issue.
   - Install other packages using the requirement file: `pip install -r requirements.txt`
   - Install 
 
+## neutralpronouns environment installation
+ - Create a conda env while specifying a python version`env create -n digress python=3.8`
+ - Install basic libraries `conda install numpy pandas matplotlib scikit-learn`
+ - Check CUDA version (`nvidia-smi` displays this)
+ - Install PyTorch + others (`conda install pytorch torchvision torchaudio cudatoolkit=CUDA_VERSION -c pytorch -c conda-forge`)
+ - Install PyTorch-Geometric (`conda install pyg -c pyg`)
+ - Install hydra/graph-tool (`conda install hydra-core graph-tool -c conda-forge`) (I think this is where issues start?)
+ - 
+
 ## Download the data
 
   - QM9 and Guacamol should download by themselves when you run the code.

@@ -36,8 +36,16 @@ from pytorch_lightning.utilities.warnings import PossibleUserWarning
 # from dgd.diffusion.extra_features_molecular import ExtraMolecularFeatures
 
 import utils
-from datasets import guacamol_dataset, qm9_dataset#, moses_dataset
-from datasets.spectre_dataset import SBMDataModule, Comm20DataModule, PlanarDataModule, SpectreDatasetInfos
+
+
+
+# from datasets import guacamol_dataset, qm9_dataset#, moses_dataset
+# from datasets.spectre_dataset import SBMDataModule, Comm20DataModule, PlanarDataModule, SpectreDatasetInfos
+
+from datasets import guacamol_dataset
+# from datasets.spectre_dataset import SBMDataModule, Comm20DataModule, PlanarDataModule, SpectreDatasetInfos
+
+
 from metrics.abstract_metrics import TrainAbstractMetricsDiscrete, TrainAbstractMetrics
 from analysis.spectre_utils import PlanarSamplingMetrics, SBMSamplingMetrics, Comm20SamplingMetrics
 from diffusion_model import LiftedDenoisingDiffusion
@@ -102,7 +110,7 @@ def setup_wandb(cfg):
     return cfg
 
 
-@hydra.main(config_path='../configs', config_name='config') #version_base='1.1',
+@hydra.main(version_base='1.1', config_path='../configs', config_name='config') #
 def main(cfg: DictConfig):
     dataset_config = cfg["dataset"]
     print("\nEntered main\n")
