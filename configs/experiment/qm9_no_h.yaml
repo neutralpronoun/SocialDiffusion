@@ -7,7 +7,7 @@ general:
     evaluate_all_checkpoints: True
 train:
     n_epochs: 1000
-    batch_size: 1024
+    batch_size: 4096
     save_model: True
 model:
     n_layers: 9
