@@ -1,7 +1,7 @@
 import torch
 
 import os
-os.chdir("../")
+# os.chdir("../")
 # from dgd import utils
 import utils
 

@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='DiGress',
+    name='SocialDiffusion',
     version='1.0.0',
     url=None,
     author='A.S., C.V.',

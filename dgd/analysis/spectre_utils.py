@@ -21,7 +21,7 @@ except:
 import pygsp as pg
 import secrets
 import os
-os.chdir("../")
+# os.chdir("../")
 from random import shuffle
 from string import ascii_uppercase, digits
 from datetime import datetime

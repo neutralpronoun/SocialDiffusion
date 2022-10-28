@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 import os
-os.chdir("../")
+# os.chdir("../")
 # from dgd import utils
 # from dgd.diffusion import diffusion_utils
 

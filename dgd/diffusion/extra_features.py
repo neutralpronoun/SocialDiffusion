@@ -1,7 +1,7 @@
 import torch
 # from torch_geometric.transforms import largest_connected_components
 import os
-os.chdir("../")
+# os.chdir("../")
 # from dgd import utils
 import utils
 

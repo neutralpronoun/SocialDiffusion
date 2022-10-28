@@ -1,5 +1,5 @@
 import os
-os.chdir("../")
+# os.chdir("../")
 
 
 # from dgd.diffusion.distributions import DistributionNodes

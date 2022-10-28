@@ -4,7 +4,7 @@ import numpy as np
 import math
 
 import os
-os.chdir("../")
+# os.chdir("../")
 
 # from dgd.utils import PlaceHolder
 from utils import PlaceHolder

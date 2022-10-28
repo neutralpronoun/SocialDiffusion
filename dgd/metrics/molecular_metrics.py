@@ -2,7 +2,7 @@ from rdkit import Chem
 from torchmetrics import MeanSquaredError, MeanAbsoluteError
 
 import os
-os.chdir("../")
+# os.chdir("../")
 
 ### packages for visualization
 # from dgd.analysis.rdkit_functions import compute_molecular_metrics

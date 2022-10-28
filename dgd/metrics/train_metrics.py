@@ -6,7 +6,7 @@ import time
 import wandb
 
 import os
-os.chdir("../")
+# os.chdir("../")
 # from dgd.metrics.abstract_metrics import SumExceptBatchMetric, SumExceptBatchMSE, SumExceptBatchKL, CrossEntropyMetric, \
 #     ProbabilityMetric, NLL
 

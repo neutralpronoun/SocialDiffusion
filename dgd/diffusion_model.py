@@ -1,5 +1,5 @@
 import os
-os.chdir("../")
+# os.chdir("../")
 import time
 
 import torch

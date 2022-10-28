@@ -9,7 +9,7 @@ from torch.nn import functional as F
 from torch import Tensor
 
 import os
-os.chdir("../")
+# os.chdir("../")
 
 # from dgd import utils
 # from dgd.diffusion import diffusion_utils
