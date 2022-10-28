@@ -20,7 +20,7 @@ general:
 train:
     optimizer: adam
     n_epochs: 1000
-    batch_size: 256
+    batch_size: 32
     save_model: True
     lr: 2e-4
 model:

@@ -42,7 +42,7 @@ import utils
 # from datasets import guacamol_dataset, qm9_dataset#, moses_dataset
 # from datasets.spectre_dataset import SBMDataModule, Comm20DataModule, PlanarDataModule, SpectreDatasetInfos
 
-from datasets import guacamol_dataset
+from datasets import guacamol_dataset, qm9_dataset
 # from datasets.spectre_dataset import SBMDataModule, Comm20DataModule, PlanarDataModule, SpectreDatasetInfos
 
 

@@ -1,5 +1,5 @@
 import os
-os.chdir("../")
+# os.chdir("../")
 import os.path as osp
 import pathlib
 from typing import Any, Sequence
