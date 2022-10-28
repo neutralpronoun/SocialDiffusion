@@ -28,6 +28,9 @@ paper results, please write to us so that we can investigate the issue.
  - Install hydra/graph-tool (`conda install hydra-core graph-tool -c conda-forge`) (I think this is where issues start?)
  - Run `python dgd/hydra_main_test.py` to check hydra with non-digress packages
  - Run `python dgd/hydra_main_test_with_digress.py` to check hydra with digress imports
+ 
+ ### Alternative:
+  - Run `conda env create -f conda_digress.yml` (this assumed you're on CUDA 11.6)
 
 ## Download the data
 
