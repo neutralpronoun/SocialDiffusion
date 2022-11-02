@@ -59,6 +59,7 @@ class GuacamolDataset(InMemoryDataset):
     all_url = 'https://figshare.com/ndownloader/files/13612745'
 
     def __init__(self, stage, root, filtered: bool, transform=None, pre_transform=None, pre_filter=None):
+        print(root)
         self.stage = stage
         self.filtered = filtered
         if self.stage == 'train':

@@ -1,0 +1,5 @@
+name: 'ego'            # ego, ego_positional
+datadir: 'data/ego/ego_pyg/'
+remove_h: True
+random_subset: null
+pin_memory: False

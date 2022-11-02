@@ -42,12 +42,15 @@ import utils
 # from datasets import guacamol_dataset, qm9_dataset#, moses_dataset
 # from datasets.spectre_dataset import SBMDataModule, Comm20DataModule, PlanarDataModule, SpectreDatasetInfos
 
-from datasets import guacamol_dataset, qm9_dataset
-# from datasets.spectre_dataset import SBMDataModule, Comm20DataModule, PlanarDataModule, SpectreDatasetInfos
+from datasets import guacamol_dataset, qm9_dataset#, moses_dataset
+from datasets import ego_dataset
+from datasets.spectre_dataset import SBMDataModule, Comm20DataModule, PlanarDataModule, SpectreDatasetInfos
+from datasets import ego_dataset
 
 
 from metrics.abstract_metrics import TrainAbstractMetricsDiscrete, TrainAbstractMetrics
-from analysis.spectre_utils import PlanarSamplingMetrics, SBMSamplingMetrics, Comm20SamplingMetrics
+from analysis.spectre_utils import PlanarSamplingMetrics, SBMSamplingMetrics, Comm20SamplingMetrics, EGOSamplingMetrics
+
 from diffusion_model import LiftedDenoisingDiffusion
 from diffusion_model_discrete import DiscreteDenoisingDiffusion
 from metrics.molecular_metrics import TrainMolecularMetrics, SamplingMolecularMetrics, \
@@ -114,14 +117,44 @@ def setup_wandb(cfg):
 def main(cfg: DictConfig):
     dataset_config = cfg["dataset"]
     print("\nEntered main\n")
+    print("\n")
+    print(cfg)
+    print("\n")
 
-    if dataset_config["name"] in ['sbm', 'comm-20', 'planar']:
+
+    if dataset_config["name"] in ["ego"]:
+        if dataset_config["name"] == "ego":
+            print("\nRecognised ego dataset\n")
+            datamodule = ego_dataset.EGODataModule(cfg)
+            datamodule.prepare_data()
+            sampling_metrics = EGOSamplingMetrics(datamodule.dataloaders)
+            # dataset_infos = ego_dataset.EGOinfos(datamodule.dataloaders)
+
+        dataset_infos = SpectreDatasetInfos(datamodule, dataset_config)
+        train_metrics = TrainAbstractMetricsDiscrete() if cfg.model.type == 'discrete' else TrainAbstractMetrics()
+        visualization_tools = NonMolecularVisualization()
+
+        if cfg.model.type == 'discrete' and cfg.model.extra_features is not None:
+            extra_features = ExtraFeatures(cfg.model.extra_features, dataset_info=dataset_infos)
+        else:
+            extra_features = DummyExtraFeatures()
+        domain_features = DummyExtraFeatures()
+
+        dataset_infos.compute_input_output_dims(datamodule=datamodule, extra_features=extra_features,
+                                                domain_features=domain_features)
+
+        model_kwargs = {'dataset_infos': dataset_infos, 'train_metrics': train_metrics,
+                        'sampling_metrics': sampling_metrics, 'visualization_tools': visualization_tools,
+                        'extra_features': extra_features, 'domain_features': domain_features}
+
+    elif dataset_config["name"] in ['sbm', 'comm-20', 'planar']:
         if dataset_config['name'] == 'sbm':
             datamodule = SBMDataModule(cfg)
             sampling_metrics = SBMSamplingMetrics(datamodule.dataloaders)
         elif dataset_config['name'] == 'comm-20':
             datamodule = Comm20DataModule(cfg)
             sampling_metrics = Comm20SamplingMetrics(datamodule.dataloaders)
+
         else:
             datamodule = PlanarDataModule(cfg)
             sampling_metrics = PlanarSamplingMetrics(datamodule.dataloaders)
@@ -162,6 +195,7 @@ def main(cfg: DictConfig):
             dataset_infos = moses_dataset.MOSESinfos(datamodule, cfg)
             datamodule.prepare_data()
             train_smiles = None
+
         else:
             raise ValueError("Dataset not implemented")
 
@@ -190,6 +224,8 @@ def main(cfg: DictConfig):
     else:
         raise NotImplementedError("Unknown dataset {}".format(cfg["dataset"]))
 
+
+    print("\nFinished building datasets!\n")
     print(f"Output from test resume:\n{cfg.general}")
     if cfg.general.test_only:
         # When testing, previous configuration is fully loaded
@@ -200,14 +236,17 @@ def main(cfg: DictConfig):
         cfg, _ = get_resume_adaptive(cfg, model_kwargs)
         os.chdir(cfg.general.resume.split('checkpoints')[0])
 
+    print("\nUtils and CFG line\n")
     utils.create_folders(cfg)
     cfg = setup_wandb(cfg)
 
+    print("\nGetting model\n")
     if cfg.model.type == 'discrete':
         model = DiscreteDenoisingDiffusion(cfg=cfg, **model_kwargs)
     else:
         model = LiftedDenoisingDiffusion(cfg=cfg, **model_kwargs)
 
+    print("\nGetting callbacks\n")
     callbacks = []
     if cfg.train.save_model:
         checkpoint_callback = ModelCheckpoint(dirpath=f"checkpoints/{cfg.general.name}",
@@ -227,6 +266,7 @@ def main(cfg: DictConfig):
         print("[WARNING]: Run is called 'test' -- it will run in debug mode on 20 batches. ")
     elif name == 'debug':
         print("[WARNING]: Run is called 'debug' -- it will run with fast_dev_run. ")
+    print(f"\nGetting trainer, GPU status: {'gpu' if torch.cuda.is_available() and cfg.general.gpus > 0 else 'cpu'}\n")
     trainer = Trainer(gradient_clip_val=cfg.train.clip_grad,
                       accelerator='gpu' if torch.cuda.is_available() and cfg.general.gpus > 0 else 'cpu',
                       devices=cfg.general.gpus if torch.cuda.is_available() and cfg.general.gpus > 0 else None,
@@ -238,15 +278,17 @@ def main(cfg: DictConfig):
                       check_val_every_n_epoch=cfg.general.check_val_every_n_epochs,
                       fast_dev_run=cfg.general.name == 'debug',
                       strategy='ddp' if cfg.general.gpus > 1 else None,
-                      enable_progress_bar=False,
+                      enable_progress_bar=True,
                       callbacks=callbacks,
                       logger=[])
 
     if not cfg.general.test_only:
+        print("\nEntering trainer\n")
         trainer.fit(model, datamodule=datamodule, ckpt_path=cfg.general.resume)
         if cfg.general.name not in ['debug', 'test']:
             trainer.test(model, datamodule=datamodule)
     else:
+        print("\nEntering tester\n")
         # Start by evaluating test_only_path
         trainer.test(model, datamodule=datamodule, ckpt_path=cfg.general.test_only)
         if cfg.general.evaluate_all_checkpoints:

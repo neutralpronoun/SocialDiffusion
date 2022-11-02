@@ -15,6 +15,7 @@ class SpectreGraphDataset(Dataset):
         """ This class can be used to load the comm20, sbm and planar datasets. """
         base_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, 'data')
         filename = os.path.join(base_path, data_file)
+        print(f"\nData filename: {filename}\nwith base path: {base_path}\n")
         self.adjs, self.eigvals, self.eigvecs, self.n_nodes, self.max_eigval, self.min_eigval, self.same_sample, self.n_max = torch.load(
             filename)
         print(f'Dataset {filename} loaded from file')
@@ -67,7 +68,6 @@ class SpectreGraphDataModule(AbstractDataModule):
         val_len = len(graphs) - train_len - test_len
         print(f'Dataset sizes: train {train_len}, val {val_len}, test {test_len}')
         splits = random_split(graphs, [train_len, val_len, test_len], generator=torch.Generator().manual_seed(1234))
-
         datasets = {'train': splits[0], 'val': splits[1], 'test': splits[2]}
         super().prepare_data(datasets)
 

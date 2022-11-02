@@ -3,6 +3,7 @@ import os
 import os.path as osp
 import pathlib
 from typing import Any, Sequence
+import json
 
 import torch
 import torch.nn.functional as F
@@ -13,6 +14,8 @@ import numpy as np
 import pandas as pd
 from torch_geometric.data import Data, InMemoryDataset, download_url, extract_zip
 from torch_geometric.utils import subgraph
+
+import networkx as nx
 
 # import dgd.utils as utils
 # from dgd.datasets.abstract_dataset import MolecularDataModule, AbstractDatasetInfos
@@ -38,13 +41,13 @@ def to_list(value: Any) -> Sequence:
         return [value]
 
 
-class QM9Dataset(InMemoryDataset):
-    raw_url = ('https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/'
-               'molnet_publish/qm9.zip')
-    raw_url2 = 'https://ndownloader.figshare.com/files/3195404'
-    processed_url = 'https://data.pyg.org/datasets/qm9_v3.zip'
+class EGODataset(InMemoryDataset):
+    raw_url = ('https://snap.stanford.edu/data/deezer_ego_nets.zip')
+    # raw_url2 = 'https://snap.stanford.edu/data/deezer_ego_nets.zip'
+    # processed_url = 'https://snap.stanford.edu/data/deezer_ego_nets.zip'
 
     def __init__(self, stage, root, remove_h: bool, transform=None, pre_transform=None, pre_filter=None):
+        print("\nStarting EGO dataset init\n")
         self.stage = stage
         if self.stage == 'train':
             self.file_idx = 0
@@ -58,7 +61,7 @@ class QM9Dataset(InMemoryDataset):
 
     @property
     def raw_file_names(self):
-        return ['gdb9.sdf', 'gdb9.sdf.csv', 'uncharacterized.txt']
+        return ['deezer_ego_nets/deezer_edges.json', 'deezer_ego_nets/deezer_target.csv']#, 'deezer_ego_nets/deezer_edges.json']
 
     @property
     def split_file_name(self):
@@ -80,17 +83,19 @@ class QM9Dataset(InMemoryDataset):
 
     def download(self):
         """
-        Download raw qm9 files. Taken from PyG QM9 class
+        Download raw ego files. Taken from PyG EGO class
         """
+
+        print(self.raw_dir)
         try:
             import rdkit  # noqa
             file_path = download_url(self.raw_url, self.raw_dir)
             extract_zip(file_path, self.raw_dir)
             os.unlink(file_path)
 
-            file_path = download_url(self.raw_url2, self.raw_dir)
-            os.rename(osp.join(self.raw_dir, '3195404'),
-                      osp.join(self.raw_dir, 'uncharacterized.txt'))
+            # file_path = download_url(self.raw_url2, self.raw_dir)
+            # os.rename(osp.join(self.raw_dir, 'deezer_ego_nets/deezer_edges.json'),
+            #           osp.join(self.raw_dir, 'uncharacterized.txt'))
         except ImportError:
             path = download_url(self.processed_url, self.raw_dir)
             extract_zip(path, self.raw_dir)
@@ -98,58 +103,72 @@ class QM9Dataset(InMemoryDataset):
 
         if files_exist(self.split_paths):
             return
-
         dataset = pd.read_csv(self.raw_paths[1])
+        print(f"Done building CSV:\n{dataset.head()}")
         n_samples = len(dataset)
-        n_train = 100000
-        n_test = int(0.1 * n_samples)
-        n_val = n_samples - (n_train + n_test)
+        n_train = 200
+        n_test = 50#int(0.1 * n_samples)
+        n_val = 50#n_samples - (n_train + n_test)
 
         # Shuffle dataset with df.sample, then split
-        train, val, test = np.split(dataset.sample(frac=1, random_state=42), [n_train, n_val + n_train])
+        train, val, test = np.split(dataset.sample(frac=0.25, random_state=42), [n_train, n_val + n_train])
         train.to_csv(os.path.join(self.raw_dir, 'train.csv'))
         val.to_csv(os.path.join(self.raw_dir, 'val.csv'))
         test.to_csv(os.path.join(self.raw_dir, 'test.csv'))
 
-    def process(self):
-        RDLogger.DisableLog('rdApp.*')
 
-        types = {'H': 0, 'C': 1, 'N': 2, 'O': 3, 'F': 4}
+
+
+
+    def process(self):
+        # RDLogger.DisableLog('rdApp.*')
+
+        types = {'H': 0, 'C': 1}#, 'N': 2, 'O': 3, 'F': 4}
         bonds = {BT.SINGLE: 0, BT.DOUBLE: 1, BT.TRIPLE: 2, BT.AROMATIC: 3}
 
         target_df = pd.read_csv(self.split_paths[self.file_idx], index_col=0)
-        target_df.drop(columns=['mol_id'], inplace=True)
+        # target_df.drop(columns=['mol_id'], inplace=True)
+
+        # with open(self.raw_paths[-1], 'r') as f:
+        #     skip = [int(x.split()[0]) - 1 for x in f.read().split('\n')[9:-2]]
+
+        # suppl = Chem.SDMolSupplier(self.raw_paths[0], removeHs=False, sanitize=False)
+        print(self.raw_paths[0])
+        # all_edges = json.loads(self.raw_paths[0])
+
+        for f in open(self.raw_paths[0], "r"):
+            all_edges = json.loads(f)
+        graphs = [nx.from_edgelist(all_edges[i]) for i in list(all_edges.keys())]
 
 
+        skip = []
+        for i, G in enumerate(graphs):
+            if G.number_of_nodes() > 30:
+                skip.append(i)
 
-        # The file "uncharacterised.csv" is a list of uncharacterised molecules - if its in that list we add it to
-        # the list of skipped files
-        with open(self.raw_paths[-1], 'r') as f:
-            skip = [int(x.split()[0]) - 1 for x in f.read().split('\n')[9:-2]]
-
-        suppl = Chem.SDMolSupplier(self.raw_paths[0], removeHs=False, sanitize=False)
+        suppl = tqdm(graphs)
 
         data_list = []
-        for i, mol in enumerate(tqdm(suppl)):
+        for i, G in enumerate(tqdm(suppl)):
             if i in skip or i not in target_df.index:
                 continue
 
-            N = mol.GetNumAtoms()
+            N = G.number_of_nodes()
 
             type_idx = []
-            for atom in mol.GetAtoms():
-                type_idx.append(types[atom.GetSymbol()])
+            for node in list(G.nodes()):
+                type_idx.append(1)#types[atom.GetSymbol()])
 
             row, col, edge_type = [], [], []
-            for bond in mol.GetBonds():
-                start, end = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+            for edge in list(G.edges()):
+                start, end = edge[0], edge[1]#bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
                 row += [start, end]
                 col += [end, start]
-                edge_type += 2 * [bonds[bond.GetBondType()] + 1]
+                edge_type += 2 * [1]#[bonds[bond.GetBondType()] + 1]
 
             edge_index = torch.tensor([row, col], dtype=torch.long)
             edge_type = torch.tensor(edge_type, dtype=torch.long)
-            edge_attr = F.one_hot(edge_type, num_classes=len(bonds)+1).to(torch.float)
+            edge_attr = F.one_hot(edge_type, num_classes=2).to(torch.float)
 
             perm = (edge_index[0] * N + edge_index[1]).argsort()
             edge_index = edge_index[:, perm]
@@ -175,31 +194,36 @@ class QM9Dataset(InMemoryDataset):
                 data = self.pre_transform(data)
 
             data_list.append(data)
-        print(data_list)
+
+        print(f"\nprocessed paths: {self.processed_paths}\nfile idx: {self.file_idx}\n")
         torch.save(self.collate(data_list), self.processed_paths[self.file_idx])
 
 
-class QM9DataModule(MolecularDataModule):
+class EGODataModule(MolecularDataModule):
     def __init__(self, cfg):
+        print("Entered EGO datamodule __init__")
         self.datadir = cfg.dataset.datadir
         super().__init__(cfg)
         self.remove_h = cfg.dataset.remove_h
+        print("Finished EGO datamodule __init__")
 
     def prepare_data(self) -> None:
         base_path = pathlib.Path(os.path.realpath(__file__)).parents[2]
         root_path = os.path.join(base_path, self.datadir)
-        datasets = {'train': QM9Dataset(stage='train', root=root_path, remove_h=self.cfg.dataset.remove_h),
-                    'val': QM9Dataset(stage='val', root=root_path, remove_h=self.cfg.dataset.remove_h),
-                    'test': QM9Dataset(stage='test', root=root_path, remove_h=self.cfg.dataset.remove_h)}
+        datasets = {'train': EGODataset(stage='train', root=root_path, remove_h=self.cfg.dataset.remove_h),
+                    'val': EGODataset(stage='val', root=root_path, remove_h=self.cfg.dataset.remove_h),
+                    'test': EGODataset(stage='test', root=root_path, remove_h=self.cfg.dataset.remove_h)}
         super().prepare_data(datasets)
 
 
-class QM9infos(AbstractDatasetInfos):
+
+
+class EGOinfos(AbstractDatasetInfos):
     def __init__(self, datamodule, cfg, recompute_statistics=False):
         self.remove_h = cfg.dataset.remove_h
         self.need_to_strip = False        # to indicate whether we need to ignore one output from the model
 
-        self.name = 'qm9'
+        self.name = 'ego'
         if self.remove_h:
             self.atom_encoder = {'C': 0, 'N': 1, 'O': 2, 'F': 3}
             self.atom_decoder = ['C', 'N', 'O', 'F']
@@ -271,7 +295,7 @@ def get_train_smiles(cfg, train_dataloader, dataset_infos, evaluate_dataset=Fals
         train_smiles = np.load(smiles_path)
     else:
         print("Computing dataset smiles...")
-        train_smiles = compute_qm9_smiles(atom_decoder, train_dataloader, remove_h)
+        train_smiles = compute_ego_smiles(atom_decoder, train_dataloader, remove_h)
         np.save(smiles_path, np.array(train_smiles))
 
     if evaluate_dataset:
@@ -296,13 +320,13 @@ def get_train_smiles(cfg, train_dataloader, dataset_infos, evaluate_dataset=Fals
     return train_smiles
 
 
-def compute_qm9_smiles(atom_decoder, train_dataloader, remove_h):
+def compute_ego_smiles(atom_decoder, train_dataloader, remove_h):
     '''
 
-    :param dataset_name: qm9 or qm9_second_half
+    :param dataset_name: ego or ego_second_half
     :return:
     '''
-    print(f"\tConverting QM9 dataset to SMILES for remove_h={remove_h}...")
+    print(f"\tConverting EGO dataset to SMILES for remove_h={remove_h}...")
 
     mols_smiles = []
     len_train = len(train_dataloader)
@@ -336,7 +360,7 @@ def compute_qm9_smiles(atom_decoder, train_dataloader, remove_h):
                 invalid += 1
 
         if i % 1000 == 0:
-            print("\tConverting QM9 dataset to SMILES {0:.2%}".format(float(i) / len_train))
+            print("\tConverting EGO dataset to SMILES {0:.2%}".format(float(i) / len_train))
     print("Number of invalid molecules", invalid)
     print("Number of disconnected molecules", disconnected)
     return mols_smiles
