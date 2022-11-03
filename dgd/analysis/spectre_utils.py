@@ -959,7 +959,7 @@ class EGOSamplingMetrics(SpectreSamplingMetrics):
     def __init__(self, dataloaders):
         super().__init__(dataloaders=dataloaders,
                          compute_emd=False,
-                         metrics_list=['degree', 'clustering', 'orbit'])
+                         metrics_list=['degree', 'clustering'])
 
 if __name__ == '__main__':
     G = n_comunities = np.random.random_integers(2, 5)

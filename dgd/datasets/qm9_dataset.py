@@ -140,6 +140,9 @@ class QM9Dataset(InMemoryDataset):
             for atom in mol.GetAtoms():
                 type_idx.append(types[atom.GetSymbol()])
 
+            # print(f"Type index {type_idx}")
+
+
             row, col, edge_type = [], [], []
             for bond in mol.GetBonds():
                 start, end = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
@@ -161,11 +164,18 @@ class QM9Dataset(InMemoryDataset):
             if self.remove_h:
                 type_idx = torch.Tensor(type_idx).long()
                 to_keep = type_idx > 0
+                # print(f"To keep {to_keep}")
+                # print(f"Edge index/attr: {edge_index} {edge_attr}")
                 edge_index, edge_attr = subgraph(to_keep, edge_index, edge_attr, relabel_nodes=True,
                                                  num_nodes=len(to_keep))
+                # print(f"Edge index/attr: {edge_index} {edge_attr}")
+                # print(f"X: {x}")
                 x = x[to_keep]
                 # Shift onehot encoding to match atom decoder
                 x = x[:, 1:]
+                #
+                # print(f"X: {x}")
+                # quit()
 
             data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y, idx=i)
 

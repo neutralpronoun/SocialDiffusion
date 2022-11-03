@@ -93,6 +93,7 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
         elif cfg.model.transition == 'marginal':
 
             node_types = self.dataset_info.node_types.float()
+            print(f"node_types {node_types}")
             x_marginals = node_types / torch.sum(node_types)
 
             edge_types = self.dataset_info.edge_types.float()
@@ -412,6 +413,9 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
         assert (abs(Qtb.X.sum(dim=2) - 1.) < 1e-4).all(), Qtb.X.sum(dim=2) - 1
         assert (abs(Qtb.E.sum(dim=2) - 1.) < 1e-4).all()
 
+        # print(f"X shape: {X.shape}\nX:{X}")
+        # print(f"Qtb.X shape: {Qtb.X.shape}\nQtb.X:{Qtb.X}")
+        # quit()
         # Compute transition probabilities
         probX = X @ Qtb.X  # (bs, n, dx_out)
         probE = E @ Qtb.E.unsqueeze(1)  # (bs, n, n, de_out)
@@ -523,7 +527,7 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
             sampled_s, discrete_sampled_s, predicted_graph = self.sample_p_zs_given_zt(t_norm, X, E, y, node_mask,
                                                                                        last_step=s_int==100)
             X, E, y = sampled_s.X, sampled_s.E, sampled_s.y
-
+            # print(f"X shape: {X.shape}\nE shape: {E.shape}\ny shape: {y.shape}\nDiscrete sampled s shape: {discrete_sampled_s.X.shape}\nKeep chain shape: {keep_chain}")
             # Save the first keep_chain graphs
             write_index = (s_int * number_chain_steps) // self.T
             chain_X[write_index] = discrete_sampled_s.X[:keep_chain]
@@ -558,8 +562,8 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
             edge_types = E[i, :n, :n].cpu()
             molecule_list.append([atom_types, edge_types])
             if i < 3:
-                print("Example of generated E: ", atom_types)
-                print("Example of generated X: ", edge_types)
+                print("Example of generated E: ", edge_types)
+                print("Example of generated X: ", atom_types)
 
         predicted_graph_list = []
         for i in range(batch_size):

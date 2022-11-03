@@ -13,6 +13,9 @@ import sys
 import pathlib
 import warnings
 
+from datetime import datetime
+
+
 import torch
 import wandb
 import hydra
@@ -105,8 +108,10 @@ def get_resume_adaptive(cfg, model_kwargs):
 
 
 def setup_wandb(cfg):
+    # now =
+    # datetime_str =
     config_dict = omegaconf.OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
-    kwargs = {'name': cfg.general.name, 'project': f'graph_ddm_{cfg.dataset.name}', 'config': config_dict,
+    kwargs = {'name': datetime.now().strftime("%m-%d-%Y-%H-%M-%S"), 'project': f'graph_ddm_{cfg.dataset.name}', 'config': config_dict,
               'settings': wandb.Settings(_disable_stats=True), 'reinit': True, 'mode': cfg.general.wandb}
     wandb.init(**kwargs)
     wandb.save('*.txt')
@@ -130,16 +135,19 @@ def main(cfg: DictConfig):
             sampling_metrics = EGOSamplingMetrics(datamodule.dataloaders)
             # dataset_infos = ego_dataset.EGOinfos(datamodule.dataloaders)
 
-        dataset_infos = SpectreDatasetInfos(datamodule, dataset_config)
+        print(f"Metric infos etc")
+        dataset_infos = ego_dataset.EGODatasetInfos(datamodule, dataset_config)#SpectreDatasetInfos(datamodule, dataset_config)
         train_metrics = TrainAbstractMetricsDiscrete() if cfg.model.type == 'discrete' else TrainAbstractMetrics()
         visualization_tools = NonMolecularVisualization()
 
+        print(f"Extra features")
         if cfg.model.type == 'discrete' and cfg.model.extra_features is not None:
             extra_features = ExtraFeatures(cfg.model.extra_features, dataset_info=dataset_infos)
         else:
             extra_features = DummyExtraFeatures()
         domain_features = DummyExtraFeatures()
 
+        print(f"Computing in/out dims")
         dataset_infos.compute_input_output_dims(datamodule=datamodule, extra_features=extra_features,
                                                 domain_features=domain_features)
 
@@ -280,6 +288,7 @@ def main(cfg: DictConfig):
                       strategy='ddp' if cfg.general.gpus > 1 else None,
                       enable_progress_bar=True,
                       callbacks=callbacks,
+                      num_sanity_val_steps=0,
                       logger=[])
 
     if not cfg.general.test_only:
