@@ -104,15 +104,14 @@ class EGODataset(InMemoryDataset):
         if files_exist(self.split_paths):
             return
         dataset = pd.read_csv(self.raw_paths[1])
-        # dataset = dataset.sample(frac = 0.1)
         print(f"Done building CSV:\n{dataset.head()}")
         n_samples = len(dataset)
-        n_train = int(0.8*n_samples)
-        n_test = int(0.1 * n_samples)
-        n_val = n_samples - (n_train + n_test)
+        n_train = 200
+        n_test = 50#int(0.1 * n_samples)
+        n_val = 50#n_samples - (n_train + n_test)
 
         # Shuffle dataset with df.sample, then split
-        train, val, test = np.split(dataset.sample(frac=1, random_state=42), [n_train, n_val + n_train])
+        train, val, test = np.split(dataset.sample(frac=0.25, random_state=42), [n_train, n_val + n_train])
         train.to_csv(os.path.join(self.raw_dir, 'train.csv'))
         val.to_csv(os.path.join(self.raw_dir, 'val.csv'))
         test.to_csv(os.path.join(self.raw_dir, 'test.csv'))
@@ -124,11 +123,18 @@ class EGODataset(InMemoryDataset):
     def process(self):
         # RDLogger.DisableLog('rdApp.*')
 
-        types = {'H': 0, 'C': 1, 'N': 2}#, 'O': 3, 'F': 4}
+        types = {'H': 0, 'C': 1}#, 'N': 2, 'O': 3, 'F': 4}
         bonds = {BT.SINGLE: 0, BT.DOUBLE: 1, BT.TRIPLE: 2, BT.AROMATIC: 3}
 
         target_df = pd.read_csv(self.split_paths[self.file_idx], index_col=0)
+        # target_df.drop(columns=['mol_id'], inplace=True)
+
+        # with open(self.raw_paths[-1], 'r') as f:
+        #     skip = [int(x.split()[0]) - 1 for x in f.read().split('\n')[9:-2]]
+
+        # suppl = Chem.SDMolSupplier(self.raw_paths[0], removeHs=False, sanitize=False)
         print(target_df.head())
+        # all_edges = json.loads(self.raw_paths[0])
 
         for f in open(self.raw_paths[0], "r"):
             all_edges = json.loads(f)
@@ -137,15 +143,12 @@ class EGODataset(InMemoryDataset):
 
         skip = []
         for i, G in enumerate(graphs):
-            if G.number_of_nodes() > 40:
+            if G.number_of_nodes() > 30:
                 skip.append(i)
 
         suppl = tqdm(graphs)
 
         data_list = []
-
-        all_nodes = []
-
         for i, G in enumerate(tqdm(suppl)):
             if i in skip or i not in target_df.index:
                 continue
@@ -153,18 +156,8 @@ class EGODataset(InMemoryDataset):
             N = G.number_of_nodes()
 
             type_idx = []
-            degrees = [G.degree[n] for n in G.nodes()]
             for node in list(G.nodes()):
-                if G.degree[node] == max(degrees):
-                    type_idx.append(2)#types[atom.GetSymbol()])
-                    all_nodes.append(2)
-                elif G.degree[node] > 1:
-                    type_idx.append(1)
-                    all_nodes.append(1)
-                else:
-                    type_idx.append(0)
-                    all_nodes.append(0)
-            # print(f"Type index {type_idx}")
+                type_idx.append(1)#types[atom.GetSymbol()])
 
             row, col, edge_type = [], [], []
             for edge in list(G.edges()):
@@ -191,18 +184,11 @@ class EGODataset(InMemoryDataset):
             if self.remove_h:
                 type_idx = torch.Tensor(type_idx).long()
                 to_keep = type_idx > 0
-                # print(f"To keep {to_keep}")
-                # print(f"Edge index/attr: {edge_index} {edge_attr}")
                 edge_index, edge_attr = subgraph(to_keep, edge_index, edge_attr, relabel_nodes=True,
                                                  num_nodes=len(to_keep))
-                # print(f"Edge index/attr: {edge_index} {edge_attr}")
-                # print(f"X: {x}")
                 x = x[to_keep]
                 # Shift onehot encoding to match atom decoder
                 x = x[:, 1:]
-                #
-                # print(f"X: {x}")
-                # quit()
 
             data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y, idx=i)
 
@@ -215,12 +201,6 @@ class EGODataset(InMemoryDataset):
 
         print(f"\nprocessed paths: {self.processed_paths}\nfile idx: {self.file_idx}\n")
         torch.save(self.collate(data_list), self.processed_paths[self.file_idx])
-
-        n_total = len(all_nodes)
-        type_counts = [all_nodes.count(typ) for typ in list(np.unique(all_nodes))]
-        # print(type_counts)
-        self.node_types = torch.tensor(type_counts) / n_total
-        print(f"File node type marginals: {self.node_types}")
 
 
 class EGODataModule(MolecularDataModule):
@@ -240,14 +220,6 @@ class EGODataModule(MolecularDataModule):
         super().prepare_data(datasets)
 
 
-class EGODatasetInfos(AbstractDatasetInfos):
-    def __init__(self, datamodule, dataset_config):
-        self.datamodule = datamodule
-        self.name = dataset_config.name
-        self.n_nodes = self.datamodule.node_counts()
-        self.node_types = datamodule.node_types()               # There are no node types
-        self.edge_types = self.datamodule.edge_counts()
-        super().complete_infos(self.n_nodes, self.node_types)
 
 
 class EGOinfos(AbstractDatasetInfos):

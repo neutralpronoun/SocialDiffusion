@@ -58,7 +58,7 @@ from diffusion_model import LiftedDenoisingDiffusion
 from diffusion_model_discrete import DiscreteDenoisingDiffusion
 from metrics.molecular_metrics import TrainMolecularMetrics, SamplingMolecularMetrics, \
     TrainMolecularMetricsDiscrete
-from analysis.visualization import MolecularVisualization, NonMolecularVisualization
+from analysis.visualization import MolecularVisualization, NonMolecularVisualization, DiscreteNodeTypeVisualization
 from diffusion.extra_features import DummyExtraFeatures, ExtraFeatures
 from diffusion.extra_features_molecular import ExtraMolecularFeatures
 
@@ -138,7 +138,7 @@ def main(cfg: DictConfig):
         print(f"Metric infos etc")
         dataset_infos = ego_dataset.EGODatasetInfos(datamodule, dataset_config)#SpectreDatasetInfos(datamodule, dataset_config)
         train_metrics = TrainAbstractMetricsDiscrete() if cfg.model.type == 'discrete' else TrainAbstractMetrics()
-        visualization_tools = NonMolecularVisualization()
+        visualization_tools = DiscreteNodeTypeVisualization()
 
         print(f"Extra features")
         if cfg.model.type == 'discrete' and cfg.model.extra_features is not None:
