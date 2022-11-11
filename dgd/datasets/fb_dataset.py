@@ -134,7 +134,7 @@ class FBDataset(InMemoryDataset):
         # quit()
 
     def communities_split(self, G):
-        partition = comm.louvain_communities(G, resolution = 15)
+        partition = comm.louvain_communities(G, resolution = 5)
         # partition_dict = {i:list(partition[i]) for i in range(len(partition))}
         # self.raw_paths[0] = 'facebook_large/musae_facebook_edges.json'
 
@@ -178,7 +178,7 @@ class FBDataset(InMemoryDataset):
 
         skip = []
         for i, G in enumerate(graphs):
-            if G.number_of_nodes() > 500:
+            if G.number_of_nodes() > 300:
                 skip.append(i)
 
         suppl = tqdm(graphs)
