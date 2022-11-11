@@ -178,7 +178,7 @@ class FBDataset(InMemoryDataset):
 
         skip = []
         for i, G in enumerate(graphs):
-            if G.number_of_nodes() > 500:
+            if G.number_of_nodes() > 400:
                 skip.append(i)
 
         suppl = tqdm(graphs)
