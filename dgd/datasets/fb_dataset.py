@@ -12,10 +12,12 @@ from rdkit.Chem.rdchem import BondType as BT
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from torch_geometric.data import Data, InMemoryDataset, download_url, extract_zip
 from torch_geometric.utils import subgraph
 
 import networkx as nx
+import networkx.algorithms.community as comm
 
 # import dgd.utils as utils
 # from dgd.datasets.abstract_dataset import MolecularDataModule, AbstractDatasetInfos
@@ -41,13 +43,13 @@ def to_list(value: Any) -> Sequence:
         return [value]
 
 
-class EGODataset(InMemoryDataset):
-    raw_url = ('https://snap.stanford.edu/data/deezer_ego_nets.zip')
-    # raw_url2 = 'https://snap.stanford.edu/data/deezer_ego_nets.zip'
-    # processed_url = 'https://snap.stanford.edu/data/deezer_ego_nets.zip'
+class FBDataset(InMemoryDataset):
+    raw_url = ('https://snap.stanford.edu/data/facebook_large.zip')
+    # raw_url2 = 'https://snap.stanford.edu/data/deezer_fb_nets.zip'
+    # processed_url = 'https://snap.stanford.edu/data/deezer_fb_nets.zip'
 
     def __init__(self, stage, root, remove_h: bool, transform=None, pre_transform=None, pre_filter=None):
-        print("\nStarting EGO dataset init\n")
+        print("\nStarting FB dataset init\n")
         self.stage = stage
         if self.stage == 'train':
             self.file_idx = 0
@@ -61,7 +63,7 @@ class EGODataset(InMemoryDataset):
 
     @property
     def raw_file_names(self):
-        return ['deezer_ego_nets/deezer_edges.json', 'deezer_ego_nets/deezer_target.csv']#, 'deezer_ego_nets/deezer_edges.json']
+        return ['facebook_large/musae_facebook_edges.json', 'facebook_large/musae_facebook_partitions.csv', 'facebook_large/musae_facebook_target.csv', 'facebook_large/musae_facebook_edges.csv']#, 'deezer_fb_nets/deezer_edges.json']
 
     @property
     def split_file_name(self):
@@ -83,7 +85,7 @@ class EGODataset(InMemoryDataset):
 
     def download(self):
         """
-        Download raw ego files. Taken from PyG EGO class
+        Download raw fb files. Taken from PyG FB class
         """
 
         print(self.raw_dir)
@@ -94,7 +96,7 @@ class EGODataset(InMemoryDataset):
             os.unlink(file_path)
 
             # file_path = download_url(self.raw_url2, self.raw_dir)
-            # os.rename(osp.join(self.raw_dir, 'deezer_ego_nets/deezer_edges.json'),
+            # os.rename(osp.join(self.raw_dir, 'deezer_fb_nets/deezer_edges.json'),
             #           osp.join(self.raw_dir, 'uncharacterized.txt'))
         except ImportError:
             path = download_url(self.processed_url, self.raw_dir)
@@ -103,38 +105,71 @@ class EGODataset(InMemoryDataset):
 
         if files_exist(self.split_paths):
             return
+
+
+        edgelist = pd.read_csv(self.raw_paths[3])
+        G = nx.from_pandas_edgelist(df = edgelist, source="id_1", target="id_2")
+        del edgelist
+        print(G)
+        self.communities_split(G)
+
+        del G
+
+
+
         dataset = pd.read_csv(self.raw_paths[1])
+        # dataset = dataset.sample(frac = 0.1)
         print(f"Done building CSV:\n{dataset.head()}")
         n_samples = len(dataset)
-        n_train = 200
-        n_test = 50#int(0.1 * n_samples)
-        n_val = 50#n_samples - (n_train + n_test)
+        n_train = int(0.8*n_samples)
+        n_test = int(0.1 * n_samples)
+        n_val = n_samples - (n_train + n_test)
 
         # Shuffle dataset with df.sample, then split
-        train, val, test = np.split(dataset.sample(frac=0.25, random_state=42), [n_train, n_val + n_train])
+        train, val, test = np.split(dataset.sample(frac=1, random_state=42), [n_train, n_val + n_train])
         train.to_csv(os.path.join(self.raw_dir, 'train.csv'))
         val.to_csv(os.path.join(self.raw_dir, 'val.csv'))
         test.to_csv(os.path.join(self.raw_dir, 'test.csv'))
 
+        # quit()
 
+    def communities_split(self, G):
+        partition = comm.louvain_communities(G, resolution = 5)
+        # partition_dict = {i:list(partition[i]) for i in range(len(partition))}
+        # self.raw_paths[0] = 'facebook_large/musae_facebook_edges.json'
 
+        partition_dict = {}
 
+        for i, p in enumerate(partition):
+            subg = G.subgraph(p)
+            edges = subg.edges()
+            edges = [list(e) for e in edges]
+            partition_dict[i] = edges
+
+        with open(self.raw_paths[0], 'w') as f:
+            json.dump(partition_dict, f)
+
+        partition_df = pd.DataFrame({'community_id':[i for i in range(len(partition))]})
+        partition_df.to_csv(self.raw_paths[1])
+
+        del partition
+        del partition_dict
+        del partition_df
 
     def process(self):
         # RDLogger.DisableLog('rdApp.*')
 
-        types = {'H': 0, 'C': 1}#, 'N': 2, 'O': 3, 'F': 4}
+        types = {'H': 0, 'C': 1, 'N': 2}#, 'O': 3, 'F': 4}
         bonds = {BT.SINGLE: 0, BT.DOUBLE: 1, BT.TRIPLE: 2, BT.AROMATIC: 3}
 
         target_df = pd.read_csv(self.split_paths[self.file_idx], index_col=0)
-        # target_df.drop(columns=['mol_id'], inplace=True)
-
-        # with open(self.raw_paths[-1], 'r') as f:
-        #     skip = [int(x.split()[0]) - 1 for x in f.read().split('\n')[9:-2]]
-
-        # suppl = Chem.SDMolSupplier(self.raw_paths[0], removeHs=False, sanitize=False)
         print(target_df.head())
-        # all_edges = json.loads(self.raw_paths[0])
+        
+        node_type_df = pd.read_csv(self.raw_paths[2])
+        unique_types = np.unique(node_type_df["page_type"])
+        print(unique_types)
+        types = {page_type:i for i, page_type in enumerate(unique_types.tolist())}
+        print(types)
 
         for f in open(self.raw_paths[0], "r"):
             all_edges = json.loads(f)
@@ -143,21 +178,35 @@ class EGODataset(InMemoryDataset):
 
         skip = []
         for i, G in enumerate(graphs):
-            if G.number_of_nodes() > 30:
+            if G.number_of_nodes() > 300:
                 skip.append(i)
 
         suppl = tqdm(graphs)
 
         data_list = []
+
+        all_nodes = []
+
         for i, G in enumerate(tqdm(suppl)):
             if i in skip or i not in target_df.index:
                 continue
 
-            N = G.number_of_nodes()
+            try:
+                nodelist = list(G.nodes())
+                N = G.number_of_nodes()
+                min_node = min(nodelist)
+            except:
+                continue
+
+
 
             type_idx = []
             for node in list(G.nodes()):
-                type_idx.append(1)#types[atom.GetSymbol()])
+                node_type = node_type_df.at[node, "page_type"]
+                type_idx.append(types[node_type])
+
+
+            G = nx.convert_node_labels_to_integers(G)
 
             row, col, edge_type = [], [], []
             for edge in list(G.edges()):
@@ -168,13 +217,19 @@ class EGODataset(InMemoryDataset):
 
             edge_index = torch.tensor([row, col], dtype=torch.long)
             edge_type = torch.tensor(edge_type, dtype=torch.long)
+            # print(edge_type)
             edge_attr = F.one_hot(edge_type, num_classes=2).to(torch.float)
+            # print(edge_attr)
 
             perm = (edge_index[0] * N + edge_index[1]).argsort()
             edge_index = edge_index[:, perm]
             edge_attr = edge_attr[perm]
 
-            x = F.one_hot(torch.tensor(type_idx), num_classes=len(types)).float()
+            print(type_idx)
+            try:
+                x = F.one_hot(torch.tensor(type_idx), num_classes=len(types)).float()
+            except:
+                continue
             y = torch.zeros((1, 0), dtype=torch.float)
             # values = target_df.loc[i]
             # target = values["target"]
@@ -184,11 +239,18 @@ class EGODataset(InMemoryDataset):
             if self.remove_h:
                 type_idx = torch.Tensor(type_idx).long()
                 to_keep = type_idx > 0
+                # print(f"To keep {to_keep}")
+                # print(f"Edge index/attr: {edge_index} {edge_attr}")
                 edge_index, edge_attr = subgraph(to_keep, edge_index, edge_attr, relabel_nodes=True,
                                                  num_nodes=len(to_keep))
+                # print(f"Edge index/attr: {edge_index} {edge_attr}")
+                # print(f"X: {x}")
                 x = x[to_keep]
                 # Shift onehot encoding to match atom decoder
                 x = x[:, 1:]
+                #
+                # print(f"X: {x}")
+                # quit()
 
             data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y, idx=i)
 
@@ -202,32 +264,46 @@ class EGODataset(InMemoryDataset):
         print(f"\nprocessed paths: {self.processed_paths}\nfile idx: {self.file_idx}\n")
         torch.save(self.collate(data_list), self.processed_paths[self.file_idx])
 
+        n_total = len(all_nodes)
+        type_counts = [all_nodes.count(typ) for typ in list(np.unique(all_nodes))]
+        # print(type_counts)
+        self.node_types = torch.tensor(type_counts) / n_total
+        print(f"File node type marginals: {self.node_types}")
 
-class EGODataModule(MolecularDataModule):
+
+class FBDataModule(MolecularDataModule):
     def __init__(self, cfg):
-        print("Entered EGO datamodule __init__")
+        print("Entered FB datamodule __init__")
         self.datadir = cfg.dataset.datadir
         super().__init__(cfg)
         self.remove_h = cfg.dataset.remove_h
-        print("Finished EGO datamodule __init__")
+        print("Finished FB datamodule __init__")
 
     def prepare_data(self) -> None:
         base_path = pathlib.Path(os.path.realpath(__file__)).parents[2]
         root_path = os.path.join(base_path, self.datadir)
-        datasets = {'train': EGODataset(stage='train', root=root_path, remove_h=self.cfg.dataset.remove_h),
-                    'val': EGODataset(stage='val', root=root_path, remove_h=self.cfg.dataset.remove_h),
-                    'test': EGODataset(stage='test', root=root_path, remove_h=self.cfg.dataset.remove_h)}
+        datasets = {'train': FBDataset(stage='train', root=root_path, remove_h=self.cfg.dataset.remove_h),
+                    'val': FBDataset(stage='val', root=root_path, remove_h=self.cfg.dataset.remove_h),
+                    'test': FBDataset(stage='test', root=root_path, remove_h=self.cfg.dataset.remove_h)}
         super().prepare_data(datasets)
 
 
+class FBDatasetInfos(AbstractDatasetInfos):
+    def __init__(self, datamodule, dataset_config):
+        self.datamodule = datamodule
+        self.name = dataset_config.name
+        self.n_nodes = self.datamodule.node_counts()
+        self.node_types = datamodule.node_types()               # There are no node types
+        self.edge_types = self.datamodule.edge_counts()
+        super().complete_infos(self.n_nodes, self.node_types)
 
 
-class EGOinfos(AbstractDatasetInfos):
+class FBinfos(AbstractDatasetInfos):
     def __init__(self, datamodule, cfg, recompute_statistics=False):
         self.remove_h = cfg.dataset.remove_h
         self.need_to_strip = False        # to indicate whether we need to ignore one output from the model
 
-        self.name = 'ego'
+        self.name = 'fb'
         if self.remove_h:
             self.atom_encoder = {'C': 0, 'N': 1, 'O': 2, 'F': 3}
             self.atom_decoder = ['C', 'N', 'O', 'F']
@@ -299,7 +375,7 @@ def get_train_smiles(cfg, train_dataloader, dataset_infos, evaluate_dataset=Fals
         train_smiles = np.load(smiles_path)
     else:
         print("Computing dataset smiles...")
-        train_smiles = compute_ego_smiles(atom_decoder, train_dataloader, remove_h)
+        train_smiles = compute_fb_smiles(atom_decoder, train_dataloader, remove_h)
         np.save(smiles_path, np.array(train_smiles))
 
     if evaluate_dataset:
@@ -324,13 +400,13 @@ def get_train_smiles(cfg, train_dataloader, dataset_infos, evaluate_dataset=Fals
     return train_smiles
 
 
-def compute_ego_smiles(atom_decoder, train_dataloader, remove_h):
+def compute_fb_smiles(atom_decoder, train_dataloader, remove_h):
     '''
 
-    :param dataset_name: ego or ego_second_half
+    :param dataset_name: fb or fb_second_half
     :return:
     '''
-    print(f"\tConverting EGO dataset to SMILES for remove_h={remove_h}...")
+    print(f"\tConverting FB dataset to SMILES for remove_h={remove_h}...")
 
     mols_smiles = []
     len_train = len(train_dataloader)
@@ -364,8 +440,7 @@ def compute_ego_smiles(atom_decoder, train_dataloader, remove_h):
                 invalid += 1
 
         if i % 1000 == 0:
-            print("\tConverting EGO dataset to SMILES {0:.2%}".format(float(i) / len_train))
+            print("\tConverting FB dataset to SMILES {0:.2%}".format(float(i) / len_train))
     print("Number of invalid molecules", invalid)
     print("Number of disconnected molecules", disconnected)
     return mols_smiles
-

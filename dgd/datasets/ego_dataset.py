@@ -153,29 +153,34 @@ class EGODataset(InMemoryDataset):
             N = G.number_of_nodes()
 
             type_idx = []
+            highest_degree_node = 0
             degrees = [G.degree[n] for n in G.nodes()]
             for node in list(G.nodes()):
                 if G.degree[node] == max(degrees):
                     type_idx.append(2)#types[atom.GetSymbol()])
                     all_nodes.append(2)
+                    highest_degree_node = node
                 elif G.degree[node] > 1:
                     type_idx.append(1)
                     all_nodes.append(1)
                 else:
                     type_idx.append(0)
                     all_nodes.append(0)
-            # print(f"Type index {type_idx}")
-
             row, col, edge_type = [], [], []
             for edge in list(G.edges()):
                 start, end = edge[0], edge[1]#bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
                 row += [start, end]
                 col += [end, start]
-                edge_type += 2 * [1]#[bonds[bond.GetBondType()] + 1]
+                if start == highest_degree_node or end == highest_degree_node:
+                    edge_type += 2 * [2]
+                else:
+                    edge_type += 2 * [1]#[bonds[bond.GetBondType()] + 1]
 
             edge_index = torch.tensor([row, col], dtype=torch.long)
             edge_type = torch.tensor(edge_type, dtype=torch.long)
-            edge_attr = F.one_hot(edge_type, num_classes=2).to(torch.float)
+            # print(edge_type)
+            edge_attr = F.one_hot(edge_type, num_classes=3).to(torch.float)
+            # print(edge_attr)
 
             perm = (edge_index[0] * N + edge_index[1]).argsort()
             edge_index = edge_index[:, perm]

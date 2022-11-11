@@ -46,13 +46,13 @@ import utils
 # from datasets.spectre_dataset import SBMDataModule, Comm20DataModule, PlanarDataModule, SpectreDatasetInfos
 
 from datasets import guacamol_dataset, qm9_dataset#, moses_dataset
-from datasets import ego_dataset
+# from datasets import ego_dataset
 from datasets.spectre_dataset import SBMDataModule, Comm20DataModule, PlanarDataModule, SpectreDatasetInfos
-from datasets import ego_dataset
+from datasets import ego_dataset, fb_dataset
 
 
 from metrics.abstract_metrics import TrainAbstractMetricsDiscrete, TrainAbstractMetrics
-from analysis.spectre_utils import PlanarSamplingMetrics, SBMSamplingMetrics, Comm20SamplingMetrics, EGOSamplingMetrics
+from analysis.spectre_utils import PlanarSamplingMetrics, SBMSamplingMetrics, Comm20SamplingMetrics, EGOSamplingMetrics, FBSamplingMetrics
 
 from diffusion_model import LiftedDenoisingDiffusion
 from diffusion_model_discrete import DiscreteDenoisingDiffusion
@@ -127,16 +127,25 @@ def main(cfg: DictConfig):
     print("\n")
 
 
-    if dataset_config["name"] in ["ego"]:
+    if dataset_config["name"] in ["ego", "fb"]:
         if dataset_config["name"] == "ego":
             print("\nRecognised ego dataset\n")
             datamodule = ego_dataset.EGODataModule(cfg)
             datamodule.prepare_data()
             sampling_metrics = EGOSamplingMetrics(datamodule.dataloaders)
-            # dataset_infos = ego_dataset.EGOinfos(datamodule.dataloaders)
+            dataset_infos = ego_dataset.EGODatasetInfos(datamodule,
+                                                        dataset_config)  # SpectreDatasetInfos(datamodule, dataset_config)
 
+        elif dataset_config["name"] == "fb":
+            print("\nRecognised ego dataset\n")
+            datamodule = fb_dataset.FBDataModule(cfg)
+            datamodule.prepare_data()
+            sampling_metrics = FBSamplingMetrics(datamodule.dataloaders)
+            dataset_infos = fb_dataset.FBDatasetInfos(datamodule,
+                                                        dataset_config)  # SpectreDatasetInfos(datamodule, dataset_config)
         print(f"Metric infos etc")
-        dataset_infos = ego_dataset.EGODatasetInfos(datamodule, dataset_config)#SpectreDatasetInfos(datamodule, dataset_config)
+
+        print(dataset_infos)
         train_metrics = TrainAbstractMetricsDiscrete() if cfg.model.type == 'discrete' else TrainAbstractMetrics()
         visualization_tools = DiscreteNodeTypeVisualization()
 

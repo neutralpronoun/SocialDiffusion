@@ -1,0 +1,5 @@
+name: 'fb'            # ego, ego_positional
+datadir: 'data/fb/fb_pyg/'
+remove_h: False
+random_subset: null
+pin_memory: False

@@ -163,7 +163,7 @@ class NonMolecularVisualization:
 
         return graph
 
-    def visualize_non_molecule(self, graph, pos, path, iterations=100, node_size=100, largest_component=False):
+    def visualize_non_molecule(self, graph, pos, path, iterations=100, node_size=100, largest_component=True):
         if largest_component:
             CGs = [graph.subgraph(c) for c in nx.connected_components(graph)]
             CGs = sorted(CGs, key=lambda x: x.number_of_nodes(), reverse=True)
@@ -246,7 +246,7 @@ class DiscreteNodeTypeVisualization:
 
         return graph
 
-    def visualize_non_molecule(self, graph, pos, path, iterations=100, node_size=100, largest_component=False):
+    def visualize_non_molecule(self, graph, pos, path, iterations=100, node_size=100, largest_component=True):
         if largest_component:
             CGs = [graph.subgraph(c) for c in nx.connected_components(graph)]
             CGs = sorted(CGs, key=lambda x: x.number_of_nodes(), reverse=True)
@@ -268,10 +268,26 @@ class DiscreteNodeTypeVisualization:
         m = max(np.abs(vmin), vmax)
         vmin, vmax = -m, m
 
-        plt.figure()
-        nx.draw(graph, pos, font_size=5, node_size=node_size, with_labels=False, node_color=colors,
-                cmap=plt.cm.coolwarm, vmin=vmin, vmax=vmax, edge_color='grey')
+        edgelist = list(graph.edges())
+        # print(graph.edges[edgelist[0]])
+        ecolors = [graph.edges[edge]["color"] for edge in edgelist]
 
+        if len(set(ecolors)) != 1:
+
+            evmin, evmax = np.min(ecolors), np.max(ecolors)
+            m = max(np.abs(evmin), evmax)
+            evmin, evmax = -m, m
+
+
+        plt.figure()
+        # nx.draw(graph, pos, font_size=5, node_size=node_size, with_labels=False, node_color=colors,
+        #         cmap=plt.cm.coolwarm, vmin=vmin, vmax=vmax, edge_color='grey')
+
+        nx.draw_networkx_nodes(graph, pos, node_size=node_size, node_color=colors, vmin=vmin, vmax=vmax)
+        if len(set(ecolors)) != 1:
+            nx.draw_networkx_edges(graph, pos, node_size=node_size, edge_color=ecolors, edge_vmin=evmin, edge_vmax=evmax)
+        else:
+            nx.draw_networkx_edges(graph, pos, node_size=node_size)
         plt.tight_layout()
         plt.savefig(path)
         plt.close("all")
@@ -303,7 +319,10 @@ class DiscreteNodeTypeVisualization:
 
         for frame in range(num_frams):
             file_name = os.path.join(path, 'fram_{}.png'.format(frame))
-            self.visualize_non_molecule(graph=graphs[frame], pos=final_pos, path=file_name)
+            try:
+                self.visualize_non_molecule(graph=graphs[frame], pos=final_pos, path=file_name)
+            except:
+                continue
             save_paths.append(file_name)
 
         imgs = [imageio.imread(fn) for fn in save_paths]
