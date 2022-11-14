@@ -1,0 +1,5 @@
+name: 'github'            # ego, ego_positional
+datadir: 'data/github/github_pyg/'
+remove_h: False
+random_subset: null
+pin_memory: False

@@ -48,11 +48,11 @@ import utils
 from datasets import guacamol_dataset, qm9_dataset#, moses_dataset
 # from datasets import ego_dataset
 from datasets.spectre_dataset import SBMDataModule, Comm20DataModule, PlanarDataModule, SpectreDatasetInfos
-from datasets import ego_dataset, fb_dataset
+from datasets import ego_dataset, fb_dataset, github_dataset
 
 
 from metrics.abstract_metrics import TrainAbstractMetricsDiscrete, TrainAbstractMetrics
-from analysis.spectre_utils import PlanarSamplingMetrics, SBMSamplingMetrics, Comm20SamplingMetrics, EGOSamplingMetrics, FBSamplingMetrics
+from analysis.spectre_utils import PlanarSamplingMetrics, SBMSamplingMetrics, Comm20SamplingMetrics, EGOSamplingMetrics, FBSamplingMetrics, GITSamplingMetrics
 
 from diffusion_model import LiftedDenoisingDiffusion
 from diffusion_model_discrete import DiscreteDenoisingDiffusion
@@ -131,7 +131,7 @@ def main(cfg: DictConfig):
     cfg = setup_wandb(cfg)
 
 
-    if dataset_config["name"] in ["ego", "fb"]:
+    if dataset_config["name"] in ["ego", "fb", "github"]:
         if dataset_config["name"] == "ego":
             print("\nRecognised ego dataset\n")
             datamodule = ego_dataset.EGODataModule(cfg)
@@ -146,6 +146,14 @@ def main(cfg: DictConfig):
             datamodule.prepare_data()
             sampling_metrics = FBSamplingMetrics(datamodule.dataloaders)
             dataset_infos = fb_dataset.FBDatasetInfos(datamodule,
+                                                        dataset_config)  # SpectreDatasetInfos(datamodule, dataset_config)
+
+        elif dataset_config["name"] == "github":
+            print("\nRecognised github dataset\n")
+            datamodule = github_dataset.GITDataModule(cfg)
+            datamodule.prepare_data()
+            sampling_metrics = GITSamplingMetrics(datamodule.dataloaders)
+            dataset_infos = github_dataset.GITDatasetInfos(datamodule,
                                                         dataset_config)  # SpectreDatasetInfos(datamodule, dataset_config)
         print(f"Metric infos etc")
 

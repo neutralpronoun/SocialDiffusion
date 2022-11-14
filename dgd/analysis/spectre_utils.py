@@ -967,6 +967,12 @@ class FBSamplingMetrics(SpectreSamplingMetrics):
                          compute_emd=False,
                          metrics_list=['degree', 'clustering'])
 
+class GITSamplingMetrics(SpectreSamplingMetrics):
+    def __init__(self, dataloaders):
+        super().__init__(dataloaders=dataloaders,
+                         compute_emd=False,
+                         metrics_list=['degree', 'clustering'])
+
 if __name__ == '__main__':
     G = n_comunities = np.random.random_integers(2, 5)
     comunity_sizes = np.random.random_integers(20, 40, size=n_comunities)
