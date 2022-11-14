@@ -137,7 +137,7 @@ class GITDataset(InMemoryDataset):
         # quit()
 
     def communities_split(self, G):
-        partition = comm.louvain_communities(G, resolution = 30)
+        partition = comm.louvain_communities(G, resolution = 10)
         # partition_dict = {i:list(partition[i]) for i in range(len(partition))}
         # self.raw_paths[0] = 'github_large/musae_github_edges.json'
 

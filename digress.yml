@@ -88,7 +88,7 @@ dependencies:
   - hydra-core=1.2.0=pyhd8ed1ab_0
   - icu=70.1=h27087fc_0
   - idna=3.4=py39h06a4308_0
-  - imageio=2.3.0=py_1
+  - imageio=2.22.0=pyhfa7a67d_0
   - importlib-metadata=4.11.3=py39h06a4308_0
   - importlib_resources=5.10.0=pyhd8ed1ab_0
   - intel-openmp=2021.4.0=h06a4308_3561
@@ -154,6 +154,7 @@ dependencies:
   - lz4-c=1.9.3=h295c915_1
   - markdown=3.3.4=py39h06a4308_0
   - markupsafe=2.1.1=py39h7f8727e_0
+  - matplotlib-base=3.5.2=py39hf590b9c_0
   - matplotlib-inline=0.1.6=py39h06a4308_0
   - mkl=2021.4.0=h06a4308_640
   - mkl-service=2.4.0=py39h7f8727e_0
@@ -173,7 +174,7 @@ dependencies:
   - oauthlib=3.2.1=py39h06a4308_0
   - omegaconf=2.2.3=py39hf3d152e_0
   - openh264=2.1.1=h4ff587b_0
-  - openssl=1.1.1q=h166bdaf_1
+  - openssl=1.1.1s=h166bdaf_0
   - overrides=7.3.1=pyhd8ed1ab_0
   - packaging=21.3=pyhd3eb1b0_0
   - pandas=1.4.4=py39h6a678d5_0
@@ -207,6 +208,7 @@ dependencies:
   - pygobject=3.42.2=py39habf54e5_0
   - pygsp=0.5.1=py_0
   - pyjwt=2.4.0=py39h06a4308_0
+  - pynvml=11.4.1=pyhd8ed1ab_0
   - pyopenssl=22.0.0=pyhd3eb1b0_0
   - pyparsing=3.0.9=py39h06a4308_0
   - pyqt=5.15.7=py39h18e9c17_0
