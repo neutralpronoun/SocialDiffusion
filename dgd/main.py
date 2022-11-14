@@ -126,6 +126,10 @@ def main(cfg: DictConfig):
     print(cfg)
     print("\n")
 
+    print("\nUtils and CFG line\n")
+    utils.create_folders(cfg)
+    cfg = setup_wandb(cfg)
+
 
     if dataset_config["name"] in ["ego", "fb"]:
         if dataset_config["name"] == "ego":
@@ -253,9 +257,7 @@ def main(cfg: DictConfig):
         cfg, _ = get_resume_adaptive(cfg, model_kwargs)
         os.chdir(cfg.general.resume.split('checkpoints')[0])
 
-    print("\nUtils and CFG line\n")
-    utils.create_folders(cfg)
-    cfg = setup_wandb(cfg)
+
 
     print("\nGetting model\n")
     if cfg.model.type == 'discrete':

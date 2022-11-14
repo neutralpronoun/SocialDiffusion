@@ -331,3 +331,123 @@ class DiscreteNodeTypeVisualization:
         imageio.mimsave(gif_path, imgs, subrectangles=True, fps=5)
         wandb.log({'chain': [wandb.Video(gif_path, caption=gif_path, format="gif")]})
         return
+
+class TrainDiscreteNodeTypeVisualization:
+    def visualize_non_molecule(self, graph, pos, path, iterations=100, node_size=100, largest_component=True):
+        if largest_component:
+            CGs = [graph.subgraph(c) for c in nx.connected_components(graph)]
+            CGs = sorted(CGs, key=lambda x: x.number_of_nodes(), reverse=True)
+            graph = CGs[0]
+
+        # Plot the graph structure with colors
+        if pos is None:
+            pos = nx.spring_layout(graph, iterations=iterations)
+
+        # # Set node colors based on the eigenvectors
+        # w, U = np.linalg.eigh(nx.normalized_laplacian_matrix(graph).toarray())
+        # vmin, vmax = np.min(U[:, 1]), np.max(U[:, 1])
+        # m = max(np.abs(vmin), vmax)
+        # vmin, vmax = -m, m
+
+        nodelist = list(graph.nodes())
+        colors = [graph.nodes[node]["color_val"] for node in nodelist]
+        vmin, vmax = np.min(colors), np.max(colors)
+        m = max(np.abs(vmin), vmax)
+        vmin, vmax = -m, m
+
+        edgelist = list(graph.edges())
+        # print(graph.edges[edgelist[0]])
+        ecolors = [graph.edges[edge]["color"] for edge in edgelist]
+
+        if len(set(ecolors)) != 1:
+
+            evmin, evmax = np.min(ecolors), np.max(ecolors)
+            m = max(np.abs(evmin), evmax)
+            evmin, evmax = -m, m
+
+
+        plt.figure()
+        # nx.draw(graph, pos, font_size=5, node_size=node_size, with_labels=False, node_color=colors,
+        #         cmap=plt.cm.coolwarm, vmin=vmin, vmax=vmax, edge_color='grey')
+
+        nx.draw_networkx_nodes(graph, pos, node_size=node_size, node_color=colors, vmin=vmin, vmax=vmax)
+        if len(set(ecolors)) != 1:
+            nx.draw_networkx_edges(graph, pos, node_size=node_size, edge_color=ecolors, edge_vmin=evmin, edge_vmax=evmax)
+        else:
+            nx.draw_networkx_edges(graph, pos, node_size=node_size)
+        plt.tight_layout()
+        plt.savefig(path)
+        plt.close("all")
+
+    def visualize(self, path: str, graphs: list, num_graphs_to_visualize: int, node_types = None, edge_types = None,  log='graph', trainer=None):
+        # TODO: implement the multi-gpu case
+        # define path to save figures
+        if not os.path.exists(path):
+            os.makedirs(path)
+        graphs = self.add_attributes(graphs, node_types = node_types, edge_types = edge_types)
+        # visualize the final molecules
+        for i in range(num_graphs_to_visualize):
+            file_path = os.path.join(path, 'graph_{}.png'.format(i))
+            # graph = self.to_networkx(graphs[i][0].numpy(), graphs[i][1].numpy())
+            graph = graphs[i]
+
+
+
+            self.visualize_non_molecule(graph=graph, pos=None, path=file_path)
+            im = plt.imread(file_path)
+            wandb.log({log: [wandb.Image(im, caption=file_path)]})
+
+    def add_attributes(self, graphs, node_types = None, edge_types = None):
+
+        for i, G in enumerate(graphs):
+            # G = nx.convert_node_labels_to_integers(G)
+            nodelist = list(G.nodes())
+            edgelist = list(G.edges())
+
+            if node_types is not None:
+                typedict = node_types[i]
+            else:
+                typedict = {i:0 for i in range(len(nodelist))}
+            for n in nodelist:
+                G.nodes[n]["color_val"] = typedict[n]
+
+
+            if edge_types is not None:
+                pass
+            else:
+                typedict = {edge:0 for edge in edgelist}
+
+            for edge in edgelist:
+                G.edges[edge]["color"] = typedict[edge]
+
+        return graphs
+
+
+
+
+
+    # def visualize_chain(self, path, graphs, trainer=None):
+    #     # convert graphs to networkx
+    #     graphs = [self.to_networkx(nodes_list[i], adjacency_matrix[i]) for i in range(nodes_list.shape[0])]
+    #     # find the coordinates of atoms in the final molecule
+    #     final_graph = graphs[-1]
+    #     final_pos = nx.spring_layout(final_graph, seed=0)
+    #
+    #     # draw gif
+    #     save_paths = []
+    #     num_frams = nodes_list.shape[0]
+    #
+    #     for frame in range(num_frams):
+    #         file_name = os.path.join(path, 'fram_{}.png'.format(frame))
+    #         try:
+    #             self.visualize_non_molecule(graph=graphs[frame], pos=final_pos, path=file_name)
+    #         except:
+    #             continue
+    #         save_paths.append(file_name)
+    #
+    #     imgs = [imageio.imread(fn) for fn in save_paths]
+    #     gif_path = os.path.join(os.path.dirname(path), '{}.gif'.format(path.split('/')[-1]))
+    #     imgs.extend([imgs[-1]] * 10)
+    #     imageio.mimsave(gif_path, imgs, subrectangles=True, fps=5)
+    #     wandb.log({'chain': [wandb.Video(gif_path, caption=gif_path, format="gif")]})
+    #     return

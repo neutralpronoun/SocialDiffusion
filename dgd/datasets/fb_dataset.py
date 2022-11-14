@@ -19,6 +19,8 @@ from torch_geometric.utils import subgraph
 import networkx as nx
 import networkx.algorithms.community as comm
 
+from datetime import datetime
+
 # import dgd.utils as utils
 # from dgd.datasets.abstract_dataset import MolecularDataModule, AbstractDatasetInfos
 # from dgd.analysis.rdkit_functions import  mol2smiles, build_molecule_with_partial_charges
@@ -28,6 +30,7 @@ import utils
 from datasets.abstract_dataset import MolecularDataModule, AbstractDatasetInfos
 from analysis.rdkit_functions import  mol2smiles, build_molecule_with_partial_charges
 from analysis.rdkit_functions import compute_molecular_metrics
+from analysis.visualization import TrainDiscreteNodeTypeVisualization
 
 
 def files_exist(files) -> bool:
@@ -134,7 +137,7 @@ class FBDataset(InMemoryDataset):
         # quit()
 
     def communities_split(self, G):
-        partition = comm.louvain_communities(G, resolution = 15)
+        partition = comm.louvain_communities(G, resolution = 30)
         # partition_dict = {i:list(partition[i]) for i in range(len(partition))}
         # self.raw_paths[0] = 'facebook_large/musae_facebook_edges.json'
 
@@ -175,7 +178,6 @@ class FBDataset(InMemoryDataset):
             all_edges = json.loads(f)
         graphs = [nx.from_edgelist(all_edges[i]) for i in list(all_edges.keys())]
 
-
         skip = []
         for i, G in enumerate(graphs):
             if G.number_of_nodes() > 300:
@@ -186,6 +188,9 @@ class FBDataset(InMemoryDataset):
         data_list = []
 
         all_nodes = []
+        node_types = []
+
+        graphs_plotting = []
 
         for i, G in enumerate(tqdm(suppl)):
             if i in skip or i not in target_df.index:
@@ -198,15 +203,21 @@ class FBDataset(InMemoryDataset):
             except:
                 continue
 
-
-
+            # typedict = {}
             type_idx = []
             for node in list(G.nodes()):
                 node_type = node_type_df.at[node, "page_type"]
                 type_idx.append(types[node_type])
+                # typedict[node] = node_type
+
 
 
             G = nx.convert_node_labels_to_integers(G)
+            # graphs[i] = G
+            graphs_plotting.append(G)
+            typedict = {idx:type_idx[idx] for idx in range(len(type_idx))}
+            # print(typedict)
+            node_types.append(typedict)
 
             row, col, edge_type = [], [], []
             for edge in list(G.edges()):
@@ -225,7 +236,7 @@ class FBDataset(InMemoryDataset):
             edge_index = edge_index[:, perm]
             edge_attr = edge_attr[perm]
 
-            print(type_idx)
+            # print(type_idx)
             try:
                 x = F.one_hot(torch.tensor(type_idx), num_classes=len(types)).float()
             except:
@@ -270,6 +281,14 @@ class FBDataset(InMemoryDataset):
         self.node_types = torch.tensor(type_counts) / n_total
         print(f"File node type marginals: {self.node_types}")
 
+        visualization_tools = TrainDiscreteNodeTypeVisualization()
+
+        # Visualize the final molecules
+        current_path = os.getcwd()
+        result_path = os.path.join(current_path,
+                                   f'graphs/train_communities/{self.stage}')
+        visualization_tools.visualize(result_path, graphs_plotting, len(graphs_plotting), node_types = node_types)
+
 
 class FBDataModule(MolecularDataModule):
     def __init__(self, cfg):
@@ -297,150 +316,150 @@ class FBDatasetInfos(AbstractDatasetInfos):
         self.edge_types = self.datamodule.edge_counts()
         super().complete_infos(self.n_nodes, self.node_types)
 
+#
+# class FBinfos(AbstractDatasetInfos):
+#     def __init__(self, datamodule, cfg, recompute_statistics=False):
+#         self.remove_h = cfg.dataset.remove_h
+#         self.need_to_strip = False        # to indicate whether we need to ignore one output from the model
+#
+#         self.name = 'fb'
+#         if self.remove_h:
+#             self.atom_encoder = {'C': 0, 'N': 1, 'O': 2, 'F': 3}
+#             self.atom_decoder = ['C', 'N', 'O', 'F']
+#             self.num_atom_types = 4
+#             self.valencies = [4, 3, 2, 1]
+#             self.atom_weights = {0: 12, 1: 14, 2: 16, 3: 19}
+#             self.max_n_nodes = 9
+#             self.max_weight = 150
+#             self.n_nodes = torch.Tensor([0, 2.2930e-05, 3.8217e-05, 6.8791e-05, 2.3695e-04, 9.7072e-04,
+#                                          0.0046472, 0.023985, 0.13666, 0.83337])
+#             self.node_types = torch.Tensor([0.7230, 0.1151, 0.1593, 0.0026])
+#             self.edge_types = torch.Tensor([0.7261, 0.2384, 0.0274, 0.0081, 0.0])
+#
+#             super().complete_infos(n_nodes=self.n_nodes, node_types=self.node_types)
+#             self.valency_distribution = torch.zeros(3 * self.max_n_nodes - 2)
+#             self.valency_distribution[0: 6] = torch.Tensor([2.6071e-06, 0.163, 0.352, 0.320, 0.16313, 0.00073])
+#         else:
+#             self.atom_encoder = {'H': 0, 'C': 1, 'N': 2, 'O': 3, 'F': 4}
+#             self.atom_decoder = ['H', 'C', 'N', 'O', 'F']
+#             self.valencies = [1, 4, 3, 2, 1]
+#             self.num_atom_types = 5
+#             self.max_n_nodes = 29
+#             self.max_weight = 390
+#             self.atom_weights = {0: 1, 1: 12, 2: 14, 3: 16, 4: 19}
+#             self.n_nodes = torch.Tensor([0, 0, 0, 1.5287e-05, 3.0574e-05, 3.8217e-05,
+#                                          9.1721e-05, 1.5287e-04, 4.9682e-04, 1.3147e-03, 3.6918e-03, 8.0486e-03,
+#                                          1.6732e-02, 3.0780e-02, 5.1654e-02, 7.8085e-02, 1.0566e-01, 1.2970e-01,
+#                                          1.3332e-01, 1.3870e-01, 9.4802e-02, 1.0063e-01, 3.3845e-02, 4.8628e-02,
+#                                          5.4421e-03, 1.4698e-02, 4.5096e-04, 2.7211e-03, 0.0000e+00, 2.6752e-04])
+#
+#             self.node_types = torch.Tensor([0.5122, 0.3526, 0.0562, 0.0777, 0.0013])
+#             self.edge_types = torch.Tensor([0.88162,  0.11062,  5.9875e-03,  1.7758e-03, 0])
+#
+#             super().complete_infos(n_nodes=self.n_nodes, node_types=self.node_types)
+#             self.valency_distribution = torch.zeros(3 * self.max_n_nodes - 2)
+#             self.valency_distribution[0:6] = torch.Tensor([0, 0.5136, 0.0840, 0.0554, 0.3456, 0.0012])
+#
+#         if recompute_statistics:
+#             np.set_printoptions(suppress=True, precision=5)
+#             self.n_nodes = datamodule.node_counts()
+#             print("Distribution of number of nodes", self.n_nodes)
+#             np.savetxt('n_counts.txt', self.n_nodes.numpy())
+#             self.node_types = datamodule.node_types()                                     # There are no node types
+#             print("Distribution of node types", self.node_types)
+#             np.savetxt('atom_types.txt', self.node_types.numpy())
+#
+#             self.edge_types = datamodule.edge_counts()
+#             print("Distribution of edge types", self.edge_types)
+#             np.savetxt('edge_types.txt', self.edge_types.numpy())
+#
+#             valencies = datamodule.valency_count(self.max_n_nodes)
+#             print("Distribution of the valencies", valencies)
+#             np.savetxt('valencies.txt', valencies.numpy())
+#             self.valency_distribution = valencies
+#             assert False
 
-class FBinfos(AbstractDatasetInfos):
-    def __init__(self, datamodule, cfg, recompute_statistics=False):
-        self.remove_h = cfg.dataset.remove_h
-        self.need_to_strip = False        # to indicate whether we need to ignore one output from the model
-
-        self.name = 'fb'
-        if self.remove_h:
-            self.atom_encoder = {'C': 0, 'N': 1, 'O': 2, 'F': 3}
-            self.atom_decoder = ['C', 'N', 'O', 'F']
-            self.num_atom_types = 4
-            self.valencies = [4, 3, 2, 1]
-            self.atom_weights = {0: 12, 1: 14, 2: 16, 3: 19}
-            self.max_n_nodes = 9
-            self.max_weight = 150
-            self.n_nodes = torch.Tensor([0, 2.2930e-05, 3.8217e-05, 6.8791e-05, 2.3695e-04, 9.7072e-04,
-                                         0.0046472, 0.023985, 0.13666, 0.83337])
-            self.node_types = torch.Tensor([0.7230, 0.1151, 0.1593, 0.0026])
-            self.edge_types = torch.Tensor([0.7261, 0.2384, 0.0274, 0.0081, 0.0])
-
-            super().complete_infos(n_nodes=self.n_nodes, node_types=self.node_types)
-            self.valency_distribution = torch.zeros(3 * self.max_n_nodes - 2)
-            self.valency_distribution[0: 6] = torch.Tensor([2.6071e-06, 0.163, 0.352, 0.320, 0.16313, 0.00073])
-        else:
-            self.atom_encoder = {'H': 0, 'C': 1, 'N': 2, 'O': 3, 'F': 4}
-            self.atom_decoder = ['H', 'C', 'N', 'O', 'F']
-            self.valencies = [1, 4, 3, 2, 1]
-            self.num_atom_types = 5
-            self.max_n_nodes = 29
-            self.max_weight = 390
-            self.atom_weights = {0: 1, 1: 12, 2: 14, 3: 16, 4: 19}
-            self.n_nodes = torch.Tensor([0, 0, 0, 1.5287e-05, 3.0574e-05, 3.8217e-05,
-                                         9.1721e-05, 1.5287e-04, 4.9682e-04, 1.3147e-03, 3.6918e-03, 8.0486e-03,
-                                         1.6732e-02, 3.0780e-02, 5.1654e-02, 7.8085e-02, 1.0566e-01, 1.2970e-01,
-                                         1.3332e-01, 1.3870e-01, 9.4802e-02, 1.0063e-01, 3.3845e-02, 4.8628e-02,
-                                         5.4421e-03, 1.4698e-02, 4.5096e-04, 2.7211e-03, 0.0000e+00, 2.6752e-04])
-
-            self.node_types = torch.Tensor([0.5122, 0.3526, 0.0562, 0.0777, 0.0013])
-            self.edge_types = torch.Tensor([0.88162,  0.11062,  5.9875e-03,  1.7758e-03, 0])
-
-            super().complete_infos(n_nodes=self.n_nodes, node_types=self.node_types)
-            self.valency_distribution = torch.zeros(3 * self.max_n_nodes - 2)
-            self.valency_distribution[0:6] = torch.Tensor([0, 0.5136, 0.0840, 0.0554, 0.3456, 0.0012])
-
-        if recompute_statistics:
-            np.set_printoptions(suppress=True, precision=5)
-            self.n_nodes = datamodule.node_counts()
-            print("Distribution of number of nodes", self.n_nodes)
-            np.savetxt('n_counts.txt', self.n_nodes.numpy())
-            self.node_types = datamodule.node_types()                                     # There are no node types
-            print("Distribution of node types", self.node_types)
-            np.savetxt('atom_types.txt', self.node_types.numpy())
-
-            self.edge_types = datamodule.edge_counts()
-            print("Distribution of edge types", self.edge_types)
-            np.savetxt('edge_types.txt', self.edge_types.numpy())
-
-            valencies = datamodule.valency_count(self.max_n_nodes)
-            print("Distribution of the valencies", valencies)
-            np.savetxt('valencies.txt', valencies.numpy())
-            self.valency_distribution = valencies
-            assert False
-
-
-def get_train_smiles(cfg, train_dataloader, dataset_infos, evaluate_dataset=False, ):
-    if evaluate_dataset:
-        assert dataset_infos is not None, "If wanting to evaluate dataset, need to pass dataset_infos"
-    datadir = cfg.dataset.datadir
-    remove_h = cfg.dataset.remove_h
-    atom_decoder = dataset_infos.atom_decoder
-    root_dir = pathlib.Path(os.path.realpath(__file__)).parents[2]
-    smiles_file_name = 'train_smiles_no_h.npy' if remove_h else 'train_smiles_h.npy'
-    smiles_path = os.path.join(root_dir, datadir, smiles_file_name)
-    if os.path.exists(smiles_path):
-        print("Dataset smiles were found.")
-        train_smiles = np.load(smiles_path)
-    else:
-        print("Computing dataset smiles...")
-        train_smiles = compute_fb_smiles(atom_decoder, train_dataloader, remove_h)
-        np.save(smiles_path, np.array(train_smiles))
-
-    if evaluate_dataset:
-        train_dataloader = train_dataloader
-        all_molecules = []
-        for i, data in enumerate(train_dataloader):
-            dense_data, node_mask = utils.to_dense(data.x, data.edge_index, data.edge_attr, data.batch)
-            dense_data = dense_data.mask(node_mask, collapse=True)
-            X, E = dense_data.X, dense_data.E
-
-            for k in range(X.size(0)):
-                n = int(torch.sum((X != -1)[k, :]))
-                atom_types = X[k, :n].cpu()
-                edge_types = E[k, :n, :n].cpu()
-                all_molecules.append([atom_types, edge_types])
-
-        print("Evaluating the dataset -- number of molecules to evaluate", len(all_molecules))
-        metrics = compute_molecular_metrics(molecule_list=all_molecules, train_smiles=train_smiles,
-                                            dataset_info=dataset_infos)
-        print(metrics[0])
-
-    return train_smiles
-
-
-def compute_fb_smiles(atom_decoder, train_dataloader, remove_h):
-    '''
-
-    :param dataset_name: fb or fb_second_half
-    :return:
-    '''
-    print(f"\tConverting FB dataset to SMILES for remove_h={remove_h}...")
-
-    mols_smiles = []
-    len_train = len(train_dataloader)
-    invalid = 0
-    disconnected = 0
-    for i, data in enumerate(train_dataloader):
-        dense_data, node_mask = utils.to_dense(data.x, data.edge_index, data.edge_attr, data.batch)
-        dense_data = dense_data.mask(node_mask, collapse=True)
-        X, E = dense_data.X, dense_data.E
-
-        n_nodes = [int(torch.sum((X != -1)[j, :])) for j in range(X.size(0))]
-
-        molecule_list = []
-        for k in range(X.size(0)):
-            n = n_nodes[k]
-            atom_types = X[k, :n].cpu()
-            edge_types = E[k, :n, :n].cpu()
-            molecule_list.append([atom_types, edge_types])
-
-        for l, molecule in enumerate(molecule_list):
-            mol = build_molecule_with_partial_charges(molecule[0], molecule[1], atom_decoder)
-            smile = mol2smiles(mol)
-            if smile is not None:
-                mols_smiles.append(smile)
-                mol_frags = Chem.rdmolops.GetMolFrags(mol, asMols=True, sanitizeFrags=True)
-                if len(mol_frags) > 1:
-                    print("Disconnected molecule", mol, mol_frags)
-                    disconnected += 1
-            else:
-                print("Invalid molecule obtained.")
-                invalid += 1
-
-        if i % 1000 == 0:
-            print("\tConverting FB dataset to SMILES {0:.2%}".format(float(i) / len_train))
-    print("Number of invalid molecules", invalid)
-    print("Number of disconnected molecules", disconnected)
-    return mols_smiles
+#
+# def get_train_smiles(cfg, train_dataloader, dataset_infos, evaluate_dataset=False, ):
+#     if evaluate_dataset:
+#         assert dataset_infos is not None, "If wanting to evaluate dataset, need to pass dataset_infos"
+#     datadir = cfg.dataset.datadir
+#     remove_h = cfg.dataset.remove_h
+#     atom_decoder = dataset_infos.atom_decoder
+#     root_dir = pathlib.Path(os.path.realpath(__file__)).parents[2]
+#     smiles_file_name = 'train_smiles_no_h.npy' if remove_h else 'train_smiles_h.npy'
+#     smiles_path = os.path.join(root_dir, datadir, smiles_file_name)
+#     if os.path.exists(smiles_path):
+#         print("Dataset smiles were found.")
+#         train_smiles = np.load(smiles_path)
+#     else:
+#         print("Computing dataset smiles...")
+#         train_smiles = compute_fb_smiles(atom_decoder, train_dataloader, remove_h)
+#         np.save(smiles_path, np.array(train_smiles))
+#
+#     if evaluate_dataset:
+#         train_dataloader = train_dataloader
+#         all_molecules = []
+#         for i, data in enumerate(train_dataloader):
+#             dense_data, node_mask = utils.to_dense(data.x, data.edge_index, data.edge_attr, data.batch)
+#             dense_data = dense_data.mask(node_mask, collapse=True)
+#             X, E = dense_data.X, dense_data.E
+#
+#             for k in range(X.size(0)):
+#                 n = int(torch.sum((X != -1)[k, :]))
+#                 atom_types = X[k, :n].cpu()
+#                 edge_types = E[k, :n, :n].cpu()
+#                 all_molecules.append([atom_types, edge_types])
+#
+#         print("Evaluating the dataset -- number of molecules to evaluate", len(all_molecules))
+#         metrics = compute_molecular_metrics(molecule_list=all_molecules, train_smiles=train_smiles,
+#                                             dataset_info=dataset_infos)
+#         print(metrics[0])
+#
+#     return train_smiles
+#
+#
+# def compute_fb_smiles(atom_decoder, train_dataloader, remove_h):
+#     '''
+#
+#     :param dataset_name: fb or fb_second_half
+#     :return:
+#     '''
+#     print(f"\tConverting FB dataset to SMILES for remove_h={remove_h}...")
+#
+#     mols_smiles = []
+#     len_train = len(train_dataloader)
+#     invalid = 0
+#     disconnected = 0
+#     for i, data in enumerate(train_dataloader):
+#         dense_data, node_mask = utils.to_dense(data.x, data.edge_index, data.edge_attr, data.batch)
+#         dense_data = dense_data.mask(node_mask, collapse=True)
+#         X, E = dense_data.X, dense_data.E
+#
+#         n_nodes = [int(torch.sum((X != -1)[j, :])) for j in range(X.size(0))]
+#
+#         molecule_list = []
+#         for k in range(X.size(0)):
+#             n = n_nodes[k]
+#             atom_types = X[k, :n].cpu()
+#             edge_types = E[k, :n, :n].cpu()
+#             molecule_list.append([atom_types, edge_types])
+#
+#         for l, molecule in enumerate(molecule_list):
+#             mol = build_molecule_with_partial_charges(molecule[0], molecule[1], atom_decoder)
+#             smile = mol2smiles(mol)
+#             if smile is not None:
+#                 mols_smiles.append(smile)
+#                 mol_frags = Chem.rdmolops.GetMolFrags(mol, asMols=True, sanitizeFrags=True)
+#                 if len(mol_frags) > 1:
+#                     print("Disconnected molecule", mol, mol_frags)
+#                     disconnected += 1
+#             else:
+#                 print("Invalid molecule obtained.")
+#                 invalid += 1
+#
+#         if i % 1000 == 0:
+#             print("\tConverting FB dataset to SMILES {0:.2%}".format(float(i) / len_train))
+#     print("Number of invalid molecules", invalid)
+#     print("Number of disconnected molecules", disconnected)
+#     return mols_smiles
