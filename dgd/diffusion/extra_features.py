@@ -10,13 +10,30 @@ class DummyExtraFeatures:
     def __init__(self):
         """ This class does not compute anything, just returns empty tensors."""
 
+    def check_sparse_to_dense(self, noisy_data):
+        print(str(noisy_data['X_t'].layout))
+        # quit()
+        if str(noisy_data['X_t'].layout) == "torch.sparse_coo":
+            self.return_sparse = True
+
+        else:
+            self.return_sparse = False
+
+        return noisy_data
+
     def __call__(self, noisy_data):
+
+        noisy_data = self.check_sparse_to_dense(noisy_data)
+
         X = noisy_data['X_t']
         E = noisy_data['E_t']
         y = noisy_data['y_t']
-        empty_x = X.new_zeros((*X.shape[:-1], 0))
-        empty_e = E.new_zeros((*E.shape[:-1], 0))
-        empty_y = y.new_zeros((y.shape[0], 0))
+        empty_x = X.new_zeros((*X.shape[:-1], 0)).float()
+        empty_e = E.new_zeros((*E.shape[:-1], 0)).float()
+        empty_y = y.new_zeros((y.shape[0], 0)).float()
+
+
+
         return utils.PlaceHolder(X=empty_x, E=empty_e, y=empty_y)
 
 
@@ -28,22 +45,68 @@ class ExtraFeatures:
         if extra_features_type in ['eigenvalues', 'all']:
             self.eigenfeatures = EigenFeatures(mode=extra_features_type)
 
+    def check_sparse_to_dense(self, noisy_data):
+        print(str(noisy_data['X_t'].layout))
+        # quit()
+        if str(noisy_data['X_t'].layout) == "torch.sparse_coo":
+            noisy_data['X_t'] = noisy_data['X_t'].to_dense()
+            noisy_data['E_t'] = noisy_data['E_t'].to_dense()
+
+            self.return_sparse = True
+
+        else:
+            self.return_sparse = False
+
+        return noisy_data
+
+    def dense_to_sparse(self, noisy_data):
+        noisy_data['X_t'] = noisy_data['X_t'].to_sparse()
+        noisy_data['E_t'] = noisy_data['E_t'].to_sparse()
+
+        return noisy_data
+
     def __call__(self, noisy_data):
         n = noisy_data['node_mask'].sum(dim=1).unsqueeze(1) / self.max_n_nodes
+
+        noisy_data = self.check_sparse_to_dense(noisy_data)
+
+
+
         x_cycles, y_cycles = self.ncycles(noisy_data)       # (bs, n_cycles)
 
         if self.features_type == 'cycles':
             E = noisy_data['E_t']
             extra_edge_attr = torch.zeros((*E.shape[:-1], 0)).type_as(E)
-            return utils.PlaceHolder(X=x_cycles, E=extra_edge_attr, y=torch.hstack((n, y_cycles)))
+
+            if self.return_sparse:
+                y = torch.hstack((n, y_cycles)).to_sparse()
+                x_cycles = x_cycles.to_sparse()
+                extra_edge_attr = extra_edge_attr.to_sparse()
+                noisy_data = self.dense_to_sparse(noisy_data)
+
+            else:
+                y = torch.hstack((n, y_cycles))
+
+            return utils.PlaceHolder(X=x_cycles, E=extra_edge_attr, y=y)
 
         elif self.features_type == 'eigenvalues':
             eigenfeatures = self.eigenfeatures(noisy_data)
             E = noisy_data['E_t']
             extra_edge_attr = torch.zeros((*E.shape[:-1], 0)).type_as(E)
             n_components, batched_eigenvalues = eigenfeatures   # (bs, 1), (bs, 10)
-            return utils.PlaceHolder(X=x_cycles, E=extra_edge_attr, y=torch.hstack((n, y_cycles, n_components,
-                                                                                    batched_eigenvalues)))
+
+            if self.return_sparse:
+                y = torch.hstack((n, y_cycles, n_components,
+                                                batched_eigenvalues)).to_sparse()
+                x_cycles = x_cycles.to_sparse()
+                extra_edge_attr = extra_edge_attr.to_sparse()
+                noisy_data = self.dense_to_sparse(noisy_data)
+
+            else:
+                y = torch.hstack((n, y_cycles, n_components,
+                                                batched_eigenvalues))
+
+            return utils.PlaceHolder(X=x_cycles, E=extra_edge_attr, y=y)
         elif self.features_type == 'all':
             eigenfeatures = self.eigenfeatures(noisy_data)
             E = noisy_data['E_t']
@@ -51,9 +114,21 @@ class ExtraFeatures:
             n_components, batched_eigenvalues, nonlcc_indicator, k_lowest_eigvec = eigenfeatures   # (bs, 1), (bs, 10),
                                                                                                 # (bs, n, 1), (bs, n, 2)
 
-            return utils.PlaceHolder(X=torch.cat((x_cycles, nonlcc_indicator, k_lowest_eigvec), dim=-1),
+            if self.return_sparse:
+                y = torch.hstack((n, y_cycles, n_components, batched_eigenvalues)).to_sparse()
+                x = torch.cat((x_cycles, nonlcc_indicator, k_lowest_eigvec), dim=-1).to_sparse()
+                extra_edge_attr = extra_edge_attr.to_sparse()
+
+                noisy_data = self.dense_to_sparse(noisy_data)
+
+            else:
+                y = torch.hstack((n, y_cycles, n_components, batched_eigenvalues))
+                x = torch.cat((x_cycles, nonlcc_indicator, k_lowest_eigvec), dim=-1)
+
+
+            return utils.PlaceHolder(X=x,
                                      E=extra_edge_attr,
-                                     y=torch.hstack((n, y_cycles, n_components, batched_eigenvalues)))
+                                     y=y)
         else:
             raise ValueError(f"Features type {self.features_type} not implemented")
 

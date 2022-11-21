@@ -137,7 +137,7 @@ class GITDataset(InMemoryDataset):
         # quit()
 
     def communities_split(self, G):
-        partition = comm.louvain_communities(G, resolution = 10)
+        partition = comm.louvain_communities(G, resolution = 20)
         # partition_dict = {i:list(partition[i]) for i in range(len(partition))}
         # self.raw_paths[0] = 'github_large/musae_github_edges.json'
 
@@ -180,7 +180,7 @@ class GITDataset(InMemoryDataset):
 
         skip = []
         for i, G in enumerate(graphs):
-            if G.number_of_nodes() > 100:
+            if G.number_of_nodes() > 200:
                 skip.append(i)
 
         suppl = tqdm(graphs)
@@ -228,9 +228,11 @@ class GITDataset(InMemoryDataset):
 
             edge_index = torch.tensor([row, col], dtype=torch.long)
             edge_type = torch.tensor(edge_type, dtype=torch.long)
-            # print(edge_type)
+            # print(edge_type.reshape(edge_type.shape[0], -1).to(torch.float))
             edge_attr = F.one_hot(edge_type, num_classes=2).to(torch.float)
+            # edge_attr = edge_type.reshape(edge_type.shape[0], -1).to(torch.float)
             # print(edge_attr)
+            # quit()
 
             perm = (edge_index[0] * N + edge_index[1]).argsort()
             edge_index = edge_index[:, perm]

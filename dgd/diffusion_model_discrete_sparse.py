@@ -114,29 +114,31 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
         self.val_counter = 0
 
     def training_step(self, data, i):
+
         # print(f"\nData pre-densification\n:"
-        #       f"\nx: {data.x}\n"
-        #       f"\nedge index: {data.edge_index}\n"
-        #       f"\nedge attr: {data.edge_attr}\n"
-        #       f"\nbatch: {data.batch}")
+        #       f"x: {data.x}\n"
+        #       f"edge index: {data.edge_index}\n"
+        #       f"edge attr: {data.edge_attr}\n"
+        #       f"batch: {data.batch}")
 
         dense_data, node_mask = utils.to_dense(data.x, data.edge_index, data.edge_attr, data.batch)
 
         # print(f"\nData post-densification:\n"
-        #       f"\ndense data: {dense_data}\n"
-        #       f"\nnode mask: {node_mask}")
-        #
-        # print(f"\nForced back to sparse:\n"
-        #       f"\nDense E: {dense_data.E}"
-        #       f"\nSparse X: {dense_data.X.to_sparse()}"
-        #       f"\nDense E: {dense_data.E}"
-        #       f"\nSparse E: {dense_data.E.to_sparse()}")
+        #       f"dense data: {dense_data}\n"
+        #       f"node mask: {node_mask}")
         #
         # quit()
 
         dense_data = dense_data.mask(node_mask)
-        X, E = dense_data.X, dense_data.E
+
+        X, E = dense_data.X.to_sparse(), dense_data.E.to_sparse()
+
         noisy_data = self.apply_noise(X, E, data.y, node_mask)
+
+        print(f"Noisy data:\n"
+              f"X:{noisy_data['X_t']}\n"
+              f"E:{noisy_data['E_t']}\n")
+
         extra_data = self.compute_extra_data(noisy_data)
         pred = self.forward(noisy_data, extra_data, node_mask)
         loss = self.train_loss(masked_pred_X=pred.X, masked_pred_E=pred.E, pred_y=pred.y,
@@ -436,19 +438,29 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
         # print(f"Qtb.X shape: {Qtb.X.shape}\nQtb.X:{Qtb.X}")
         # quit()
         # Compute transition probabilities
-        probX = X @ Qtb.X  # (bs, n, dx_out)
-        probE = E @ Qtb.E.unsqueeze(1)  # (bs, n, n, de_out)
+        # print(f"X: {X}\n"
+        #       f"Qtb: {Qtb}"
+        #       f"Qtb.X: {Qtb.X}")
+        #
+        # quit()
+
+        probX = X.to_dense() @ Qtb.X  # (bs, n, dx_out)
+        probE = E.to_dense() @ Qtb.E.unsqueeze(1)  # (bs, n, n, de_out)
 
         sampled_t = diffusion_utils.sample_discrete_features(probX=probX, probE=probE, node_mask=node_mask)
 
-        X_t = F.one_hot(sampled_t.X, num_classes=self.Xdim_output)
-        E_t = F.one_hot(sampled_t.E, num_classes=self.Edim_output)
+        X_t = F.one_hot(sampled_t.X, num_classes=self.Xdim_output)#.to_sparse()
+        E_t = F.one_hot(sampled_t.E, num_classes=self.Edim_output)#.to_sparse()
         assert (X.shape == X_t.shape) and (E.shape == E_t.shape)
+
+        # print(f"X: {X_t}\n"
+        #       f"node mask: {node_mask}\n"
+        #       f"node_mask sparse: {node_mask.to_sparse()}")
 
         z_t = utils.PlaceHolder(X=X_t, E=E_t, y=y).type_as(X_t).mask(node_mask)
 
         noisy_data = {'t_int': t_int, 't': t_float, 'beta_t': beta_t, 'alpha_s_bar': alpha_s_bar,
-                      'alpha_t_bar': alpha_t_bar, 'X_t': z_t.X, 'E_t': z_t.E, 'y_t': z_t.y, 'node_mask': node_mask}
+                      'alpha_t_bar': alpha_t_bar, 'X_t': z_t.X.to_sparse(), 'E_t': z_t.E.to_sparse(), 'y_t': z_t.y.to_sparse().float(), 'node_mask': node_mask}
         return noisy_data
 
     def compute_val_loss(self, pred, noisy_data, X, E, y, node_mask, test=False):
@@ -690,11 +702,13 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
         extra_features = self.extra_features(noisy_data)
         extra_molecular_features = self.domain_features(noisy_data)
 
+
+
         extra_X = torch.cat((extra_features.X, extra_molecular_features.X), dim=-1)
         extra_E = torch.cat((extra_features.E, extra_molecular_features.E), dim=-1)
         extra_y = torch.cat((extra_features.y, extra_molecular_features.y), dim=-1)
 
         t = noisy_data['t']
-        extra_y = torch.cat((extra_y, t), dim=1)
+        extra_y = torch.cat((extra_y, t.to_sparse()), dim=1).float()
 
         return utils.PlaceHolder(X=extra_X, E=extra_E, y=extra_y)
