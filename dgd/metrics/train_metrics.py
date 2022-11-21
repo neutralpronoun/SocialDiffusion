@@ -84,6 +84,15 @@ class TrainLossDiscrete(nn.Module):
         true_E : tensor -- (bs, n, n, de)
         true_y : tensor -- (bs, )
         log : boolean. """
+
+        if str(true_X.layout) == "torch.sparse_coo":
+            masked_pred_E = masked_pred_E.to_dense()
+            masked_pred_X = masked_pred_X.to_dense()
+            pred_y = pred_y.to_dense()
+            true_X = true_X.to_dense()
+            true_E = true_E.to_dense()
+            true_y = true_y.to_dense()
+
         true_X = torch.reshape(true_X, (-1, true_X.size(-1)))  # (bs * n, dx)
         true_E = torch.reshape(true_E, (-1, true_E.size(-1)))  # (bs * n * n, de)
         masked_pred_X = torch.reshape(masked_pred_X, (-1, masked_pred_X.size(-1)))  # (bs * n, dx)

@@ -137,7 +137,7 @@ class EGODataset(InMemoryDataset):
 
         skip = []
         for i, G in enumerate(graphs):
-            if G.number_of_nodes() > 40:
+            if G.number_of_nodes() > 200:
                 skip.append(i)
 
         suppl = tqdm(graphs)

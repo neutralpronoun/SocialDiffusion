@@ -222,10 +222,31 @@ class PlaceHolder:
         self.y = self.y.type_as(x)
         return self
 
+    def check_sparse_to_dense(self, noisy_data):
+        # print(str(noisy_data['X_t'].layout))
+        # quit()
+        if str(noisy_data['X_t'].layout) == "torch.sparse_coo":
+            noisy_data['X_t'] = noisy_data['X_t'].to_dense()
+            noisy_data['E_t'] = noisy_data['E_t'].to_dense()
+
+            self.return_sparse = True
+
+        else:
+            self.return_sparse = False
+
+        return noisy_data
+
     def mask(self, node_mask, collapse=False):
         x_mask = node_mask.unsqueeze(-1)          # bs, n, 1
         e_mask1 = x_mask.unsqueeze(2)             # bs, n, 1, 1
         e_mask2 = x_mask.unsqueeze(1)             # bs, 1, n, 1
+
+        if str(self.X.layout) == "torch.sparse_coo":
+            self.X = self.X.to_dense()
+            self.E = self.E.to_dense()
+            return_sparse = True
+        else:
+            return_sparse = False
 
         if collapse:
             self.X = torch.argmax(self.X, dim=-1)
@@ -237,6 +258,10 @@ class PlaceHolder:
             self.X = self.X * x_mask
             self.E = self.E * e_mask1 * e_mask2
             assert torch.allclose(self.E, torch.transpose(self.E, 1, 2))
+
+            if return_sparse:
+                self.X = self.X.to_sparse()
+                self.E = self.E.to_sparse()
         return self
 
 

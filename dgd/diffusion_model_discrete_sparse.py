@@ -14,7 +14,7 @@ import os
 # from dgd.metrics.abstract_metrics import SumExceptBatchMetric, SumExceptBatchKL, NLL
 # from dgd import utils
 
-from models.transformer_model import GraphTransformer
+from models.transformer_model_sparse import GraphTransformer
 from diffusion.noise_schedule import DiscreteUniformTransition, PredefinedNoiseScheduleDiscrete,\
     MarginalUniformTransition
 from diffusion import diffusion_utils
@@ -93,7 +93,7 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
         elif cfg.model.transition == 'marginal':
 
             node_types = self.dataset_info.node_types.float()
-            print(f"node_types {node_types}")
+            # print(f"node_types {node_types}")
             x_marginals = node_types / torch.sum(node_types)
 
             edge_types = self.dataset_info.edge_types.float()
@@ -135,9 +135,9 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
 
         noisy_data = self.apply_noise(X, E, data.y, node_mask)
 
-        print(f"Noisy data:\n"
-              f"X:{noisy_data['X_t']}\n"
-              f"E:{noisy_data['E_t']}\n")
+        # print(f"Noisy data:\n"
+        #       f"X:{noisy_data['X_t']}\n"
+        #       f"E:{noisy_data['E_t']}\n")
 
         extra_data = self.compute_extra_data(noisy_data)
         pred = self.forward(noisy_data, extra_data, node_mask)
@@ -345,9 +345,9 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
                diffusion_utils.sum_except_batch(kl_distance_y)
 
     def compute_Lt(self, X, E, y, pred, noisy_data, node_mask, test):
-        pred_probs_X = F.softmax(pred.X, dim=-1)
-        pred_probs_E = F.softmax(pred.E, dim=-1)
-        pred_probs_y = F.softmax(pred.y, dim=-1)
+        pred_probs_X = F.softmax(pred.X.to_dense(), dim=-1)
+        pred_probs_E = F.softmax(pred.E.to_dense(), dim=-1)
+        pred_probs_y = F.softmax(pred.y.to_dense(), dim=-1)
 
         Qtb = self.transition_model.get_Qt_bar(noisy_data['alpha_t_bar'], self.device)
         Qsb = self.transition_model.get_Qt_bar(noisy_data['alpha_s_bar'], self.device)
@@ -509,6 +509,8 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
         E = torch.cat((noisy_data['E_t'], extra_data.E), dim=3).float()
         y = torch.hstack((noisy_data['y_t'], extra_data.y)).float()
         return self.model(X, E, y, node_mask)
+
+
 
     @torch.no_grad()
     def sample_batch(self, batch_id: int, batch_size: int, keep_chain: int, number_chain_steps: int,

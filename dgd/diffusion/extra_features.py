@@ -11,7 +11,7 @@ class DummyExtraFeatures:
         """ This class does not compute anything, just returns empty tensors."""
 
     def check_sparse_to_dense(self, noisy_data):
-        print(str(noisy_data['X_t'].layout))
+        # print(str(noisy_data['X_t'].layout))
         # quit()
         if str(noisy_data['X_t'].layout) == "torch.sparse_coo":
             self.return_sparse = True
@@ -46,7 +46,7 @@ class ExtraFeatures:
             self.eigenfeatures = EigenFeatures(mode=extra_features_type)
 
     def check_sparse_to_dense(self, noisy_data):
-        print(str(noisy_data['X_t'].layout))
+        # print(str(noisy_data['X_t'].layout))
         # quit()
         if str(noisy_data['X_t'].layout) == "torch.sparse_coo":
             noisy_data['X_t'] = noisy_data['X_t'].to_dense()

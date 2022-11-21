@@ -32,6 +32,8 @@ from analysis.rdkit_functions import  mol2smiles, build_molecule_with_partial_ch
 from analysis.rdkit_functions import compute_molecular_metrics
 from analysis.visualization import TrainDiscreteNodeTypeVisualization
 
+from community_layout.layout_class import CommunityLayout
+
 
 def files_exist(files) -> bool:
     # NOTE: We return `False` in case `files` is empty, leading to a
@@ -114,6 +116,7 @@ class GITDataset(InMemoryDataset):
         G = nx.from_pandas_edgelist(df = edgelist, source="id_1", target="id_2")
         del edgelist
         print(G)
+
         self.communities_split(G)
 
         del G
@@ -137,7 +140,7 @@ class GITDataset(InMemoryDataset):
         # quit()
 
     def communities_split(self, G):
-        partition = comm.louvain_communities(G, resolution = 20)
+        partition = comm.louvain_communities(G, resolution = 40)
         # partition_dict = {i:list(partition[i]) for i in range(len(partition))}
         # self.raw_paths[0] = 'github_large/musae_github_edges.json'
 
@@ -290,6 +293,7 @@ class GITDataset(InMemoryDataset):
         result_path = os.path.join(current_path,
                                    f'graphs/train_communities/{self.stage}')
         visualization_tools.visualize(result_path, graphs_plotting, min(15, len(graphs_plotting)), node_types = node_types)
+
 
 
 class GITDataModule(MolecularDataModule):

@@ -55,7 +55,7 @@ from metrics.abstract_metrics import TrainAbstractMetricsDiscrete, TrainAbstract
 from analysis.spectre_utils import PlanarSamplingMetrics, SBMSamplingMetrics, Comm20SamplingMetrics, EGOSamplingMetrics, FBSamplingMetrics, GITSamplingMetrics
 
 from diffusion_model import LiftedDenoisingDiffusion
-from diffusion_model_discrete_sparse import DiscreteDenoisingDiffusion
+from diffusion_model_discrete import DiscreteDenoisingDiffusion
 from metrics.molecular_metrics import TrainMolecularMetrics, SamplingMolecularMetrics, \
     TrainMolecularMetricsDiscrete
 from analysis.visualization import MolecularVisualization, NonMolecularVisualization, DiscreteNodeTypeVisualization
@@ -121,19 +121,19 @@ def setup_wandb(cfg):
 @hydra.main(version_base='1.1', config_path='../configs', config_name='config') #
 def main(cfg: DictConfig):
     dataset_config = cfg["dataset"]
-    print("\nEntered main\n")
-    print("\n")
-    print(cfg)
-    print("\n")
+    print("\nEntered main")
+    # print("\n")
+    # print(cfg)
+    # print("\n")
 
-    print("\nUtils and CFG line\n")
+    print("\nUtils and CFG line")
     utils.create_folders(cfg)
     cfg = setup_wandb(cfg)
 
 
     if dataset_config["name"] in ["ego", "fb", "github"]:
         if dataset_config["name"] == "ego":
-            print("\nRecognised ego dataset\n")
+            # print("\nRecognised ego dataset\n")
             datamodule = ego_dataset.EGODataModule(cfg)
             datamodule.prepare_data()
             sampling_metrics = EGOSamplingMetrics(datamodule.dataloaders)
@@ -141,7 +141,7 @@ def main(cfg: DictConfig):
                                                         dataset_config)  # SpectreDatasetInfos(datamodule, dataset_config)
 
         elif dataset_config["name"] == "fb":
-            print("\nRecognised ego dataset\n")
+            # print("\nRecognised ego dataset\n")
             datamodule = fb_dataset.FBDataModule(cfg)
             datamodule.prepare_data()
             sampling_metrics = FBSamplingMetrics(datamodule.dataloaders)
@@ -149,7 +149,7 @@ def main(cfg: DictConfig):
                                                         dataset_config)  # SpectreDatasetInfos(datamodule, dataset_config)
 
         elif dataset_config["name"] == "github":
-            print("\nRecognised github dataset\n")
+            # print("\nRecognised github dataset\n")
             datamodule = github_dataset.GITDataModule(cfg)
             datamodule.prepare_data()
             sampling_metrics = GITSamplingMetrics(datamodule.dataloaders)
@@ -157,7 +157,7 @@ def main(cfg: DictConfig):
                                                         dataset_config)  # SpectreDatasetInfos(datamodule, dataset_config)
         print(f"Metric infos etc")
 
-        print(dataset_infos)
+        # print(dataset_infos)
         train_metrics = TrainAbstractMetricsDiscrete() if cfg.model.type == 'discrete' else TrainAbstractMetrics()
         visualization_tools = DiscreteNodeTypeVisualization()
 
@@ -255,7 +255,7 @@ def main(cfg: DictConfig):
 
 
     print("\nFinished building datasets!\n")
-    print(f"Output from test resume:\n{cfg.general}")
+    # print(f"Output from test resume:\n{cfg.general}")
     if cfg.general.test_only:
         # When testing, previous configuration is fully loaded
         cfg, _ = get_resume(cfg, model_kwargs)
@@ -267,13 +267,13 @@ def main(cfg: DictConfig):
 
 
 
-    print("\nGetting model\n")
+    print("\nGetting model")
     if cfg.model.type == 'discrete':
         model = DiscreteDenoisingDiffusion(cfg=cfg, **model_kwargs)
     else:
         model = LiftedDenoisingDiffusion(cfg=cfg, **model_kwargs)
 
-    print("\nGetting callbacks\n")
+    print("Getting callbacks\n")
     callbacks = []
     if cfg.train.save_model:
         checkpoint_callback = ModelCheckpoint(dirpath=f"checkpoints/{cfg.general.name}",

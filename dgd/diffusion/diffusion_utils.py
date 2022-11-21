@@ -266,7 +266,7 @@ def sample_discrete_features(probX, probE, node_mask):
 
     probE[probE < 0.] = 0.
 
-    print(f"ProbE: {probE}")
+    # print(f"ProbE: {probE}")
 
     # Sample E
     E_t = probE.multinomial(1).reshape(node_mask.size(0), node_mask.size(1), node_mask.size(1))   # (bs, n, n)
