@@ -13,9 +13,22 @@ import matplotlib
 # matplotlib.use("macOSX")
 import matplotlib.pyplot as plt
 
+from community_layout.layout_class import CommunityLayout
 
+def LargeGraphVisualization(G, partition):
+    layout = CommunityLayout(G, community_algorithm=partition)
 
+    fig, ax = plt.subplots(figsize = (8,8))
 
+    ax = layout.display(ax = ax)
+
+    plt.tight_layout()
+
+    current_path = os.getcwd()
+    result_path = os.path.join(current_path,
+                               f'graphs/train_communities/all_communities.png')
+
+    plt.savefig(result_path)
 
 class MolecularVisualization:
     def __init__(self, remove_h, dataset_infos):

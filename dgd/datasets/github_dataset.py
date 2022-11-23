@@ -30,7 +30,7 @@ import utils
 from datasets.abstract_dataset import MolecularDataModule, AbstractDatasetInfos
 from analysis.rdkit_functions import  mol2smiles, build_molecule_with_partial_charges
 from analysis.rdkit_functions import compute_molecular_metrics
-from analysis.visualization import TrainDiscreteNodeTypeVisualization
+from analysis.visualization import TrainDiscreteNodeTypeVisualization, LargeGraphVisualization
 
 from community_layout.layout_class import CommunityLayout
 
@@ -117,6 +117,7 @@ class GITDataset(InMemoryDataset):
         del edgelist
         print(G)
 
+
         self.communities_split(G)
 
         del G
@@ -140,7 +141,7 @@ class GITDataset(InMemoryDataset):
         # quit()
 
     def communities_split(self, G):
-        partition = comm.louvain_communities(G, resolution = 40)
+        partition = comm.louvain_communities(G, resolution = 50)
         # partition_dict = {i:list(partition[i]) for i in range(len(partition))}
         # self.raw_paths[0] = 'github_large/musae_github_edges.json'
 
@@ -157,6 +158,8 @@ class GITDataset(InMemoryDataset):
 
         partition_df = pd.DataFrame({'community_id':[i for i in range(len(partition))]})
         partition_df.to_csv(self.raw_paths[1])
+
+        # LargeGraphVisualization(G, partition)
 
         del partition
         del partition_dict
@@ -183,7 +186,7 @@ class GITDataset(InMemoryDataset):
 
         skip = []
         for i, G in enumerate(graphs):
-            if G.number_of_nodes() > 200:
+            if G.number_of_nodes() > 100:
                 skip.append(i)
 
         suppl = tqdm(graphs)

@@ -361,6 +361,7 @@ def sample_discrete_feature_noise(limit_dist, node_mask):
     e_limit = limit_dist.E[None, None, None, :].expand(bs, n_max, n_max, -1)
     y_limit = limit_dist.y[None, :].expand(bs, -1)
     U_X = x_limit.flatten(end_dim=-2).multinomial(1).reshape(bs, n_max)
+    e_limit[e_limit < 0] = 0.
     U_E = e_limit.flatten(end_dim=-2).multinomial(1).reshape(bs, n_max, n_max)
     U_y = torch.empty((bs, 0))
 

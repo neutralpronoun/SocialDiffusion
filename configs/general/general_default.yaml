@@ -9,7 +9,7 @@ resume: null            # If resume, path to ckpt file from outputs directory in
 test_only: null # "/home/alex/Projects/SocialDiffusion/outputs/2022-11-09/18-10-14/checkpoints/graph-tf-model/epoch=183.ckpt"  # alt is null         # Use absolute path
 
 check_val_every_n_epochs: 10
-sample_every_val: 2
+sample_every_val: 1
 val_check_interval: null
 samples_to_generate: 8       # We advise to set it to 2 x batch_size maximum
 samples_to_save: 8
