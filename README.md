@@ -30,7 +30,7 @@ paper results, please write to us so that we can investigate the issue.
  - Run `python dgd/hydra_main_test_with_digress.py` to check hydra with digress imports
  
  ### Alternative:
-  - Run `conda env create -f conda_digress.yml` (this assumed you're on CUDA 11.6)
+  - Run `conda env create -f social_diffusion.yml` (this assumed you're on CUDA 11.6)
 
 ## Download the data
 
