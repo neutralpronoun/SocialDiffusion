@@ -285,7 +285,7 @@ class DiscreteNodeTypeVisualization:
         # print(graph.edges[edgelist[0]])
         ecolors = [graph.edges[edge]["color"] for edge in edgelist]
 
-        if len(set(ecolors)) != 1:
+        if len(set(ecolors)) > 1:
 
             evmin, evmax = np.min(ecolors), np.max(ecolors)
             m = max(np.abs(evmin), evmax)
@@ -297,7 +297,7 @@ class DiscreteNodeTypeVisualization:
         #         cmap=plt.cm.coolwarm, vmin=vmin, vmax=vmax, edge_color='grey')
 
         nx.draw_networkx_nodes(graph, pos, node_size=node_size, node_color=colors, vmin=vmin, vmax=vmax)
-        if len(set(ecolors)) != 1:
+        if len(set(ecolors)) > 1:
             nx.draw_networkx_edges(graph, pos, node_size=node_size, edge_color=ecolors, edge_vmin=evmin, edge_vmax=evmax)
         else:
             nx.draw_networkx_edges(graph, pos, node_size=node_size)
