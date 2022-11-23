@@ -55,7 +55,7 @@ from metrics.abstract_metrics import TrainAbstractMetricsDiscrete, TrainAbstract
 from analysis.spectre_utils import PlanarSamplingMetrics, SBMSamplingMetrics, Comm20SamplingMetrics, EGOSamplingMetrics, FBSamplingMetrics, GITSamplingMetrics
 
 from diffusion_model import LiftedDenoisingDiffusion
-from diffusion_model_discrete_sparse import DiscreteDenoisingDiffusion
+from diffusion_model_discrete import DiscreteDenoisingDiffusion
 from metrics.molecular_metrics import TrainMolecularMetrics, SamplingMolecularMetrics, \
     TrainMolecularMetricsDiscrete
 from analysis.visualization import MolecularVisualization, NonMolecularVisualization, DiscreteNodeTypeVisualization

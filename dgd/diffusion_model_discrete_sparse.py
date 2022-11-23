@@ -14,7 +14,7 @@ import os
 # from dgd.metrics.abstract_metrics import SumExceptBatchMetric, SumExceptBatchKL, NLL
 # from dgd import utils
 
-from models.transformer_model_sparse import GraphTransformer
+from models.transformer_model import GraphTransformer
 from diffusion.noise_schedule import DiscreteUniformTransition, PredefinedNoiseScheduleDiscrete,\
     MarginalUniformTransition
 from diffusion import diffusion_utils
