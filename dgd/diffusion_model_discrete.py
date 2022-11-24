@@ -615,6 +615,7 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
                                        f'graphs/{self.name}/epoch{self.current_epoch}_b{batch_id}/')
             self.visualization_tools.visualize(result_path, molecule_list, save_final)
             self.visualization_tools.visualize(result_path, predicted_graph_list, save_final, log='predicted')
+            self.visualization_tools.visualize_grid(result_path, predicted_graph_list, save_final, log='predicted_grid')
             print("Done.")
 
         return molecule_list

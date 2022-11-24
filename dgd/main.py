@@ -131,7 +131,7 @@ def main(cfg: DictConfig):
     cfg = setup_wandb(cfg)
 
 
-    if dataset_config["name"] in ["ego", "fb", "github"]:
+    if dataset_config["name"] in ["ego", "fb", "github", "github_subsample"]:
         if dataset_config["name"] == "ego":
             # print("\nRecognised ego dataset\n")
             datamodule = ego_dataset.EGODataModule(cfg)
@@ -148,7 +148,7 @@ def main(cfg: DictConfig):
             dataset_infos = fb_dataset.FBDatasetInfos(datamodule,
                                                         dataset_config)  # SpectreDatasetInfos(datamodule, dataset_config)
 
-        elif dataset_config["name"] == "github":
+        elif dataset_config["name"] in ["github", "github_subsample"]:
             # print("\nRecognised github dataset\n")
             datamodule = github_dataset.GITDataModule(cfg)
             datamodule.prepare_data()

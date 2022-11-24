@@ -1,0 +1,8 @@
+name: 'github_subsample'            # ego, ego_positional
+datadir: 'data/github/github_pyg/'
+remove_h: False
+random_subset: null
+pin_memory: False
+subsample: True
+resolution: 7
+max_size: 125

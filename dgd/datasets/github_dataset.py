@@ -34,6 +34,8 @@ from analysis.visualization import TrainDiscreteNodeTypeVisualization, LargeGrap
 
 from community_layout.layout_class import CommunityLayout
 
+from littleballoffur.exploration_sampling import MetropolisHastingsRandomWalkSampler
+
 
 def files_exist(files) -> bool:
     # NOTE: We return `False` in case `files` is empty, leading to a
@@ -53,7 +55,9 @@ class GITDataset(InMemoryDataset):
     # raw_url2 = 'https://snap.stanford.edu/data/deezer_git_nets.zip'
     # processed_url = 'https://snap.stanford.edu/data/deezer_git_nets.zip'
 
-    def __init__(self, stage, root, remove_h: bool, transform=None, pre_transform=None, pre_filter=None):
+    def __init__(self, stage, root, remove_h: bool, transform=None,
+                 pre_transform=None, pre_filter=None, subsample = False,
+                 max_size = 100, resolution = 20):
         print("\nStarting GIT dataset init\n")
         self.stage = stage
         if self.stage == 'train':
@@ -63,6 +67,9 @@ class GITDataset(InMemoryDataset):
         else:
             self.file_idx = 2
         self.remove_h = remove_h
+        self.subsample = subsample
+        self.max_size = max_size
+        self.resolution = resolution
         super().__init__(root, transform, pre_transform, pre_filter)
         self.data, self.slices = torch.load(self.processed_paths[self.file_idx])
 
@@ -117,10 +124,17 @@ class GITDataset(InMemoryDataset):
         del edgelist
         print(G)
 
+        if self.subsample:
+            sampler = MetropolisHastingsRandomWalkSampler(int(0.1*len(list(G.nodes()))))
+            G = sampler.sample(G)
+            print(G)
+
+
+
 
         self.communities_split(G)
 
-        del G
+        self.G = G
 
 
 
@@ -141,9 +155,11 @@ class GITDataset(InMemoryDataset):
         # quit()
 
     def communities_split(self, G):
-        partition = comm.louvain_communities(G, resolution = 50)
+        partition = comm.louvain_communities(G, resolution = self.resolution)
         # partition_dict = {i:list(partition[i]) for i in range(len(partition))}
         # self.raw_paths[0] = 'github_large/musae_github_edges.json'
+
+        self.community_diagnostics(G, partition)
 
         partition_dict = {}
 
@@ -162,8 +178,19 @@ class GITDataset(InMemoryDataset):
         # LargeGraphVisualization(G, partition)
 
         del partition
-        del partition_dict
+        # del partition_dict
+        self.partition = partition_dict
         del partition_df
+
+    def community_diagnostics(self, G, partition):
+
+        print(f"N communities: {len(partition)}")
+
+        sizes = [len(partition[k]) for k in range(len(partition))]
+        print(f"Mean size: {np.mean(sizes)}\n"
+              f"Deviation: {np.std(sizes)}\n"
+              f"Max size: {np.max(sizes)}\n"
+              f"Min size: {np.min(sizes)}")
 
     def process(self):
         # RDLogger.DisableLog('rdApp.*')
@@ -186,7 +213,7 @@ class GITDataset(InMemoryDataset):
 
         skip = []
         for i, G in enumerate(graphs):
-            if G.number_of_nodes() > 100:
+            if G.number_of_nodes() > self.max_size:
                 skip.append(i)
 
         suppl = tqdm(graphs)
@@ -296,6 +323,12 @@ class GITDataset(InMemoryDataset):
         result_path = os.path.join(current_path,
                                    f'graphs/train_communities/{self.stage}')
         visualization_tools.visualize(result_path, graphs_plotting, min(15, len(graphs_plotting)), node_types = node_types)
+        visualization_tools.visualize_grid(result_path, graphs_plotting, min(15, len(graphs_plotting)),
+                                      node_types=node_types, log = "real_grid")
+
+
+        # LargeGraphVisualization(self.G.copy(), self.partition)
+
 
 
 
@@ -310,9 +343,20 @@ class GITDataModule(MolecularDataModule):
     def prepare_data(self) -> None:
         base_path = pathlib.Path(os.path.realpath(__file__)).parents[2]
         root_path = os.path.join(base_path, self.datadir)
-        datasets = {'train': GITDataset(stage='train', root=root_path, remove_h=self.cfg.dataset.remove_h),
-                    'val': GITDataset(stage='val', root=root_path, remove_h=self.cfg.dataset.remove_h),
-                    'test': GITDataset(stage='test', root=root_path, remove_h=self.cfg.dataset.remove_h)}
+        datasets = {'train': GITDataset(stage='train',
+                                        root=root_path,
+                                        remove_h=self.cfg.dataset.remove_h,
+                                        subsample = self.cfg.dataset.subsample,
+                                        resolution = self.cfg.dataset.resolution,
+                                        max_size = self.cfg.dataset.max_size),
+                    'val': GITDataset(stage='val',
+                                      root=root_path,
+                                      remove_h=self.cfg.dataset.remove_h,
+                                      max_size = self.cfg.dataset.max_size),
+                    'test': GITDataset(stage='test',
+                                       root=root_path,
+                                       remove_h=self.cfg.dataset.remove_h,
+                                       max_size = self.cfg.dataset.max_size)}
         super().prepare_data(datasets)
 
 
