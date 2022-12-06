@@ -343,6 +343,9 @@ class DiscreteNodeTypeVisualization:
 
         axes = [ax for sublist in axes for ax in sublist]
 
+        for ax in axes:
+            ax.set_axis_off()
+
         # visualize the final molecules
         for i in tqdm(range(num_graphs_to_visualize)):
             ax = axes[i]
@@ -494,7 +497,10 @@ class TrainDiscreteNodeTypeVisualization:
         fig, axes = plt.subplots(figsize=(ncols*2, nrows*2), nrows = nrows, ncols=ncols)
 
         axes = [ax for sublist in axes for ax in sublist]
-        print(axes)
+
+        for ax in axes:
+            ax.set_axis_off()
+
         graphs = self.add_attributes(graphs, node_types=node_types, edge_types=edge_types)
         # visualize the final molecules
         for i in tqdm(range(num_graphs_to_visualize - 1)):
