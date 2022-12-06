@@ -157,7 +157,7 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
         print("Size of the input features", self.Xdim, self.Edim, self.ydim)
 
     def on_train_epoch_start(self) -> None:
-        print("Starting train epoch...")
+        # print("Starting train epoch...")
         self.start_epoch_time = time.time()
         self.train_loss.reset()
         self.train_metrics.reset()
@@ -580,9 +580,9 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
             atom_types = X[i, :n].cpu()
             edge_types = E[i, :n, :n].cpu()
             molecule_list.append([atom_types, edge_types])
-            if i < 3:
-                print("Example of generated E: ", edge_types)
-                print("Example of generated X: ", atom_types)
+            # if i < 3:
+            #     print("Example of generated E: ", edge_types)
+            #     print("Example of generated X: ", atom_types)
 
         predicted_graph_list = []
         for i in range(batch_size):
@@ -613,9 +613,9 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
             current_path = os.getcwd()
             result_path = os.path.join(current_path,
                                        f'graphs/{self.name}/epoch{self.current_epoch}_b{batch_id}/')
-            self.visualization_tools.visualize(result_path, molecule_list, save_final)
-            self.visualization_tools.visualize(result_path, predicted_graph_list, save_final, log='predicted')
-            self.visualization_tools.visualize_grid(result_path, predicted_graph_list, save_final, log='predicted_grid')
+            # self.visualization_tools.visualize(result_path, molecule_list, save_final)
+            self.visualization_tools.visualize(result_path, predicted_graph_list, min(len(predicted_graph_list), 15), log='predicted')
+            self.visualization_tools.visualize_grid(result_path, predicted_graph_list, min(len(predicted_graph_list), 15), log='predicted_grid')
             print("Done.")
 
         return molecule_list

@@ -43,11 +43,13 @@ class AbstractDataModule(pl.LightningDataModule):
     def __getitem__(self, idx):
         return self.dataloaders['train'][idx]
 
-    def node_counts(self, max_nodes_possible=300):
+    def node_counts(self, max_nodes_possible=1000):
         all_counts = torch.zeros(max_nodes_possible)
         for split in ['train', 'val', 'test']:
             for i, data in enumerate(self.dataloaders[split]):
                 unique, counts = torch.unique(data.batch, return_counts=True)
+                # print(unique, counts)
+                # print(data.batch)
                 for count in counts:
                     all_counts[count] += 1
         max_index = max(all_counts.nonzero())

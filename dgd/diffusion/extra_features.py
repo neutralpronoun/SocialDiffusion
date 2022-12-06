@@ -139,7 +139,7 @@ class ExtraFeatures:
 
 class NodeCycleFeatures:
     def __init__(self):
-        self.kcycles = KNodeCycles()
+        self.kcycles = ReducedKNodeCycles()
 
     def __call__(self, noisy_data):
         adj_matrix = noisy_data['E_t'][..., 1:].sum(dim=-1).float()
@@ -383,4 +383,57 @@ class KNodeCycles:
 
         kcyclesx = torch.cat([k2x, k3x, k4x, k5x], dim=-1)
         kcyclesy = torch.cat([k2y, k3y, k4y, k5y, k6y], dim=-1)
+        return kcyclesx, kcyclesy
+
+class ReducedKNodeCycles:
+    """ Builds cycle counts for each node in a graph.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def calculate_kpowers(self):
+        self.k1_matrix = self.adj_matrix.float()
+        self.d = self.adj_matrix.sum(dim=-1)
+        self.k2_matrix = self.k1_matrix @ self.adj_matrix.float()
+        self.k3_matrix = self.k2_matrix @ self.adj_matrix.float()
+        self.k4_matrix = self.k3_matrix @ self.adj_matrix.float()
+
+    def k2_cycle(self):
+        c2 = batch_diagonal(self.k2_matrix)
+
+        return c2.unsqueeze(-1).float(), (torch.sum(c2, dim=-1) / 4).unsqueeze(-1).float()
+
+    def k3_cycle(self):
+        """ tr(A ** 3). """
+        c3 = batch_diagonal(self.k3_matrix)
+        #
+        # print(f"C3: {c3}\n"
+        #       f"C3 unsqueezed: {(c3 / 2).unsqueeze(-1).float()}\n"
+        #       f"second term: {(torch.sum(c3, dim=-1) / 6).unsqueeze(-1).float()}")
+
+        return (c3 / 2).unsqueeze(-1).float(), (torch.sum(c3, dim=-1) / 6).unsqueeze(-1).float()
+
+    def k4_cycle(self):
+        diag_a4 = batch_diagonal(self.k4_matrix)
+        c4 = diag_a4 - self.d * (self.d - 1) - (self.adj_matrix @ self.d.unsqueeze(-1)).sum(dim=-1)
+        return (c4 / 2).unsqueeze(-1).float(), (torch.sum(c4, dim=-1) / 8).unsqueeze(-1).float()
+
+
+    def k_cycles(self, adj_matrix, verbose=False):
+        self.adj_matrix = adj_matrix
+        self.calculate_kpowers()
+
+        k2x, k2y = self.k2_cycle()
+        assert (k2x >= -0.1).all()
+
+        k3x, k3y = self.k3_cycle()
+        assert (k3x >= -0.1).all()
+
+        k4x, k4y = self.k4_cycle()
+        assert (k4x >= -0.1).all()
+
+
+        kcyclesx = torch.cat([k2x, k3x, k4x], dim=-1)
+        kcyclesy = torch.cat([k2y, k3y, k4y], dim=-1)
         return kcyclesx, kcyclesy

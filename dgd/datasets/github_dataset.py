@@ -18,6 +18,7 @@ from torch_geometric.utils import subgraph
 
 import networkx as nx
 import networkx.algorithms.community as comm
+import wandb
 
 from datetime import datetime
 
@@ -125,7 +126,7 @@ class GITDataset(InMemoryDataset):
         print(G)
 
         if self.subsample:
-            sampler = MetropolisHastingsRandomWalkSampler(int(0.1*len(list(G.nodes()))))
+            sampler = MetropolisHastingsRandomWalkSampler(int(0.25*len(list(G.nodes()))))
             G = sampler.sample(G)
             print(G)
 
@@ -191,6 +192,11 @@ class GITDataset(InMemoryDataset):
               f"Deviation: {np.std(sizes)}\n"
               f"Max size: {np.max(sizes)}\n"
               f"Min size: {np.min(sizes)}")
+
+        wandb.log({"Mean_Community_Size": np.mean(sizes),
+              "Community_Size_Deviation": np.std(sizes),
+              "Max size": np.max(sizes),
+              "Min size": np.min(sizes)})
 
     def process(self):
         # RDLogger.DisableLog('rdApp.*')

@@ -12,6 +12,7 @@ import wandb
 import matplotlib
 # matplotlib.use("macOSX")
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from community_layout.layout_class import CommunityLayout
 
@@ -261,7 +262,7 @@ class DiscreteNodeTypeVisualization:
 
         return graph
 
-    def visualize_non_molecule(self, graph, pos, path, iterations=100, node_size=20, largest_component=True, ax = None):
+    def visualize_non_molecule(self, graph, pos, path, iterations=100, node_size=10, largest_component=True, ax = None):
         if largest_component:
             CGs = [graph.subgraph(c) for c in nx.connected_components(graph)]
             CGs = sorted(CGs, key=lambda x: x.number_of_nodes(), reverse=True)
@@ -343,7 +344,7 @@ class DiscreteNodeTypeVisualization:
         axes = [ax for sublist in axes for ax in sublist]
 
         # visualize the final molecules
-        for i in range(num_graphs_to_visualize):
+        for i in tqdm(range(num_graphs_to_visualize)):
             ax = axes[i]
             file_path = os.path.join(path, 'graph_{}.png'.format(i))
             graph = self.to_networkx(graphs[i][0].numpy(), graphs[i][1].numpy())
@@ -406,7 +407,7 @@ class TrainDiscreteNodeTypeVisualization:
             graph.add_edge(edge[0], edge[1], color=float(edge_type), weight=3 * edge_type)
 
         return graph
-    def visualize_non_molecule(self, graph, pos, path, iterations=100, node_size=100, largest_component=True, ax = None):
+    def visualize_non_molecule(self, graph, pos, path, iterations=200, node_size=10, largest_component=True, ax = None):
         if largest_component:
             CGs = [graph.subgraph(c) for c in nx.connected_components(graph)]
             CGs = sorted(CGs, key=lambda x: x.number_of_nodes(), reverse=True)
@@ -447,7 +448,7 @@ class TrainDiscreteNodeTypeVisualization:
         # nx.draw(graph, pos, font_size=5, node_size=node_size, with_labels=False, node_color=colors,
         #         cmap=plt.cm.coolwarm, vmin=vmin, vmax=vmax, edge_color='grey')
 
-        nx.draw_networkx_nodes(graph, pos, node_size=node_size, node_color=colors, vmin=vmin, vmax=vmax, ax = ax)
+        nx.draw_networkx_nodes(graph, pos, node_size=node_size, node_color=colors, vmin=vmin, vmax=vmax, ax = ax, edgecolors="black")
         if len(set(ecolors)) != 1:
             nx.draw_networkx_edges(graph, pos, node_size=node_size, edge_color=ecolors, edge_vmin=evmin, edge_vmax=evmax, ax = ax)
         else:
@@ -488,15 +489,15 @@ class TrainDiscreteNodeTypeVisualization:
             os.makedirs(path)
 
         nrows = 3
-        ncols = int(np.around(num_graphs_to_visualize / 3))
+        ncols = int(np.around(num_graphs_to_visualize / 3, decimals = 0))
 
-        fig, axes = plt.subplots(figsize=(nrows*2, ncols*2), nrows = nrows, ncols=ncols)
+        fig, axes = plt.subplots(figsize=(ncols*2, nrows*2), nrows = nrows, ncols=ncols)
 
         axes = [ax for sublist in axes for ax in sublist]
         print(axes)
         graphs = self.add_attributes(graphs, node_types=node_types, edge_types=edge_types)
         # visualize the final molecules
-        for i in range(num_graphs_to_visualize):
+        for i in tqdm(range(num_graphs_to_visualize - 1)):
             ax = axes[i]
             graph = graphs[i]
             file_path = os.path.join(path, 'graph_{}.png'.format(i))
@@ -527,7 +528,7 @@ class TrainDiscreteNodeTypeVisualization:
 
 
             if edge_types is not None:
-                pass
+                typedict = edge_types[i]
             else:
                 typedict = {edge:0 for edge in edgelist}
 

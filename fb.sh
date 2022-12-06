@@ -12,7 +12,7 @@ do
   do
     for resolution in "${resolutions[@]}"
     do
-      python dgd/main.py dataset=github_h2 dataset.resolution=$(echo $scale + $resolution | bc)
+      python dgd/main.py dataset=fb_h2 dataset.resolution=$(echo $scale + $resolution | bc)
       rm -r data
     done
   done

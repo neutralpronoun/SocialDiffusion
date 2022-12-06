@@ -14,6 +14,6 @@ extra_features: 'cycles'        # 'all', 'cycles', 'eigenvalues' or null
 hidden_mlp_dims: {'X': 64, 'E': 64, 'y': 8}
 
 # The dimensions should satisfy dx % n_head == 0
-hidden_dims : {'dx': 64, 'de': 64, 'dy': 8, 'n_head': 8, 'dim_ffX': 64, 'dim_ffE': 64, 'dim_ffy': 8}
+hidden_dims : {'dx': 64, 'de': 64, 'dy': 8, 'n_head': 4, 'dim_ffX': 64, 'dim_ffE': 64, 'dim_ffy': 8}
 
 lambda_train: [5, 0]

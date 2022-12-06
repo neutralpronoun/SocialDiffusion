@@ -1,0 +1,9 @@
+name: 'github_h2'            # ego, ego_positional
+datadir: 'data/github/github_h2/'
+remove_h: False
+random_subset: null
+pin_memory: False
+subsample: True
+resolution: 10
+max_size: 300
+dataset_testing: True

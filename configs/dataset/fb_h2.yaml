@@ -1,9 +1,9 @@
-name: 'fb'            # ego, ego_positional
-datadir: 'data/fb/fb_h1/'
+name: 'fb_h2'            # ego, ego_positional
+datadir: 'data/fb/fb_h2/'
 remove_h: False
 random_subset: null
 pin_memory: False
 subsample: False
 resolution: 5
-max_size: 200
+max_size: 500
 dataset_testing: False

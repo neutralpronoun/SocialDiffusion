@@ -48,7 +48,7 @@ import utils
 from datasets import guacamol_dataset, qm9_dataset#, moses_dataset
 # from datasets import ego_dataset
 from datasets.spectre_dataset import SBMDataModule, Comm20DataModule, PlanarDataModule, SpectreDatasetInfos
-from datasets import ego_dataset, fb_dataset, github_dataset
+from datasets import ego_dataset, fb_dataset, github_dataset, github_h2, fb_h2
 
 
 from metrics.abstract_metrics import TrainAbstractMetricsDiscrete, TrainAbstractMetrics
@@ -112,7 +112,7 @@ def setup_wandb(cfg):
     # datetime_str =
     config_dict = omegaconf.OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
     kwargs = {'name': datetime.now().strftime("%m-%d-%Y-%H-%M-%S"), 'project': f'graph_ddm_{cfg.dataset.name}', 'config': config_dict,
-              'settings': wandb.Settings(_disable_stats=True), 'reinit': True, 'mode': cfg.general.wandb}
+              'settings': wandb.Settings(_disable_stats=False), 'reinit': True, 'mode': cfg.general.wandb}
     wandb.init(**kwargs)
     wandb.save('*.txt')
     return cfg
@@ -131,7 +131,7 @@ def main(cfg: DictConfig):
     cfg = setup_wandb(cfg)
 
 
-    if dataset_config["name"] in ["ego", "fb", "github", "github_subsample"]:
+    if dataset_config["name"] in ["ego", "fb", "fb_h2", "github", "github_subsample", "github_h2"]:
         if dataset_config["name"] == "ego":
             # print("\nRecognised ego dataset\n")
             datamodule = ego_dataset.EGODataModule(cfg)
@@ -155,6 +155,20 @@ def main(cfg: DictConfig):
             sampling_metrics = GITSamplingMetrics(datamodule.dataloaders)
             dataset_infos = github_dataset.GITDatasetInfos(datamodule,
                                                         dataset_config)  # SpectreDatasetInfos(datamodule, dataset_config)
+
+        elif dataset_config["name"] == "github_h2":
+            datamodule = github_h2.GITH2DataModule(cfg)
+            datamodule.prepare_data()
+            sampling_metrics = GITSamplingMetrics(datamodule.dataloaders)
+            dataset_infos = github_dataset.GITDatasetInfos(datamodule,
+                                                        dataset_config)  # SpectreDatasetInfos(datamodule, dataset_config)
+
+        elif dataset_config["name"] == "fb_h2":
+            datamodule = fb_h2.FBH2DataModule(cfg)
+            datamodule.prepare_data()
+            sampling_metrics = FBSamplingMetrics(datamodule.dataloaders)
+            dataset_infos = fb_dataset.FBDatasetInfos(datamodule,
+                                                        dataset_config)  # SpectreDatasetInfos(datamodule, dataset_config)
         print(f"Metric infos etc")
 
         # print(dataset_infos)
@@ -175,6 +189,9 @@ def main(cfg: DictConfig):
         model_kwargs = {'dataset_infos': dataset_infos, 'train_metrics': train_metrics,
                         'sampling_metrics': sampling_metrics, 'visualization_tools': visualization_tools,
                         'extra_features': extra_features, 'domain_features': domain_features}
+
+        if cfg.dataset.dataset_testing:
+            quit()
 
     elif dataset_config["name"] in ['sbm', 'comm-20', 'planar']:
         if dataset_config['name'] == 'sbm':
@@ -281,7 +298,7 @@ def main(cfg: DictConfig):
                                               monitor='val/epoch_NLL',
                                               save_top_k=5,
                                               mode='min',
-                                              every_n_epochs=1)
+                                              every_n_epochs=10)
         callbacks.append(checkpoint_callback)
 
     if cfg.train.ema_decay > 0:
@@ -305,7 +322,7 @@ def main(cfg: DictConfig):
                       check_val_every_n_epoch=cfg.general.check_val_every_n_epochs,
                       fast_dev_run=cfg.general.name == 'debug',
                       strategy='ddp' if cfg.general.gpus > 1 else None,
-                      enable_progress_bar=True,
+                      enable_progress_bar=cfg.train.progress_bar,
                       callbacks=callbacks,
                       num_sanity_val_steps=0,
                       logger=[])

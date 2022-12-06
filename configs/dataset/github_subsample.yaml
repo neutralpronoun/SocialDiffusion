@@ -4,5 +4,6 @@ remove_h: False
 random_subset: null
 pin_memory: False
 subsample: True
-resolution: 7
-max_size: 125
+resolution: 5
+max_size: 200
+dataset_testing: True

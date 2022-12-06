@@ -12,13 +12,13 @@ check_val_every_n_epochs: 5
 sample_every_val: 5
 val_check_interval: null
 samples_to_generate: 8       # We advise to set it to 2 x batch_size maximum
-samples_to_save: 8
+samples_to_save: 16
 chains_to_save: 0
 log_every_steps: 5
 number_chain_steps: 100        # Number of frames in each gif
 
-final_model_samples_to_generate: 100
-final_model_samples_to_save: 100
-final_model_chains_to_save: 10
+final_model_samples_to_generate: 105
+final_model_samples_to_save: 105
+final_model_chains_to_save: 0
 
 evaluate_all_checkpoints: False
