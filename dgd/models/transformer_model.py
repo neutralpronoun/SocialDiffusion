@@ -71,8 +71,8 @@ class XEyTransformerLayer(nn.Module):
             node_mask: (bs, n) Mask for the src keys per batch (optional)
             Output: newX, newE, new_y with the same shape.
         """
-
         newX, newE, new_y = self.self_attn(X, E, y, node_mask=node_mask)
+
 
         newX_d = self.dropoutX1(newX)
         X = self.normX1(X + newX_d)
@@ -229,6 +229,13 @@ class GraphTransformer(nn.Module):
         self.out_dim_X = output_dims['X']
         self.out_dim_E = output_dims['E']
         self.out_dim_y = output_dims['y']
+        #
+        print(f"Model output dims:\n"
+              f"X: {self.out_dim_X}\n"
+              f"E: {self.out_dim_E}\n"
+              f"y: {self.out_dim_y}")
+        print(f"Model input dims:\n"
+              f"{input_dims}")
 
         self.mlp_in_X = nn.Sequential(nn.Linear(input_dims['X'], hidden_mlp_dims['X']), act_fn_in,
                                       nn.Linear(hidden_mlp_dims['X'], hidden_dims['dx']), act_fn_in)

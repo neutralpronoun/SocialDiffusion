@@ -97,6 +97,8 @@ class CrossEntropyMetric(Metric):
             preds: Predictions from model   (bs * n, d) or (bs * n * n, d)
             target: Ground truth values     (bs * n, d) or (bs * n * n, d). """
         target = torch.argmax(target, dim=-1)
+        # print(preds.shape, target.shape)
+        # print(preds, target)
         output = F.cross_entropy(preds, target, reduction='sum')
         self.total_ce += output
         self.total_samples += preds.size(0)

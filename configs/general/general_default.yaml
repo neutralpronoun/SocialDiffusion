@@ -11,9 +11,9 @@ test_only: null # "/home/alex/Projects/SocialDiffusion/outputs/2022-11-09/18-10-
 check_val_every_n_epochs: 5
 sample_every_val: 5
 val_check_interval: null
-samples_to_generate: 8       # We advise to set it to 2 x batch_size maximum
+samples_to_generate: 16       # We advise to set it to 2 x batch_size maximum
 samples_to_save: 16
-chains_to_save: 0
+chains_to_save: 8
 log_every_steps: 5
 number_chain_steps: 100        # Number of frames in each gif
 

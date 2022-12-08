@@ -6,4 +6,5 @@ pin_memory: False
 subsample: False
 resolution: 20
 max_size: 100
+dataset_testing: False
 

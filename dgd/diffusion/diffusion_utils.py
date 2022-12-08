@@ -235,7 +235,7 @@ def check_issues_norm_values(gamma, norm_val1, norm_val2, num_stdevs=8):
             f'1 / norm_value = {1. / max_norm_value}')
 
 
-def sample_discrete_features(probX, probE, node_mask):
+def sample_discrete_features(probX, probE, node_mask, probY = None):
     ''' Sample features from multinomial distribution with given probabilities (probX, probE, proby)
         :param probX: bs, n, dx_out        node features
         :param probE: bs, n, n, de_out     edge features
@@ -252,6 +252,10 @@ def sample_discrete_features(probX, probE, node_mask):
     # Sample X
     X_t = probX.multinomial(1)                                  # (bs * n, 1)
     X_t = X_t.reshape(node_mask.size(0), node_mask.size(1))     # (bs, n)
+
+    # if probY is not None:
+    #     Y_t =
+
 
     # Noise E
     # The masked rows should define probability distributions as well
@@ -363,7 +367,12 @@ def sample_discrete_feature_noise(limit_dist, node_mask):
     U_X = x_limit.flatten(end_dim=-2).multinomial(1).reshape(bs, n_max)
     e_limit[e_limit < 0] = 0.
     U_E = e_limit.flatten(end_dim=-2).multinomial(1).reshape(bs, n_max, n_max)
-    U_y = torch.empty((bs, 0))
+
+    print(x_limit.shape, y_limit, y_limit.shape)
+    if y_limit.numel() > 0:
+        U_y = y_limit.flatten(end_dim=-2).multinomial(1).reshape(bs)
+    else:
+        U_y = torch.empty((bs, 0))
 
     long_mask = node_mask.long()
     U_X = U_X.type_as(long_mask)
@@ -372,6 +381,7 @@ def sample_discrete_feature_noise(limit_dist, node_mask):
 
     U_X = F.one_hot(U_X, num_classes=x_limit.shape[-1]).float()
     U_E = F.one_hot(U_E, num_classes=e_limit.shape[-1]).float()
+    U_y = F.one_hot(U_y, num_classes=y_limit.shape[-1]).float()
 
     # Get upper triangular part of edge noise, without main diagonal
     upper_triangular_mask = torch.zeros_like(U_E)

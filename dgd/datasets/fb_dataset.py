@@ -58,7 +58,7 @@ class FBDataset(InMemoryDataset):
 
     def __init__(self, stage, root, remove_h: bool, transform=None,
                  pre_transform=None, pre_filter=None, subsample = False,
-                 max_size = 100, resolution = 20, n_reps = 50):
+                 max_size = 100, resolution = 20, n_reps = 25):
         print("\nStarting GIT dataset init\n")
         self.stage = stage
         if self.stage == 'train':
@@ -252,12 +252,12 @@ class FBDataset(InMemoryDataset):
             except:
                 continue
 
-            # typedict = {}
+
+
             type_idx = []
             for node in list(G.nodes()):
                 node_type = node_type_df.at[node, "page_type"]
                 type_idx.append(types[node_type])
-                # typedict[node] = node_type
 
 
 
@@ -290,7 +290,22 @@ class FBDataset(InMemoryDataset):
                 x = F.one_hot(torch.tensor(type_idx), num_classes=len(types)).float()
             except:
                 continue
-            y = torch.zeros((1, 0), dtype=torch.float)
+
+
+            # y = torch.zeros((1, 0), dtype=torch.float)
+            these_node_types, counts = np.unique(type_idx, return_counts=True)
+            if counts.shape[0] <= 1:
+                graph_type = these_node_types[0]
+            else:
+                most_common_idx = np.argmax(counts)
+                graph_type = these_node_types[most_common_idx]
+            # print(these_node_types, counts, graph_type)
+
+            # y = torch.Tensor([graph_type]).reshape(1,1)
+            y = F.one_hot(torch.tensor([graph_type]), num_classes=len(types)).float()
+            # print("\n")
+            # print(y)
+            # print(x)
             # values = target_df.loc[i]
             # target = values["target"]
             # y = torch.Tensor([target]).reshape(1,1)

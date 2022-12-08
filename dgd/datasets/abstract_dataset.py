@@ -146,6 +146,15 @@ class AbstractDatasetInfos:
         self.input_dims['E'] += ex_extra_molecular_feat.E.size(-1)
         self.input_dims['y'] += ex_extra_molecular_feat.y.size(-1)
 
+        # print(f"dataset infos:\n"
+        #       f"X: {self.input_dims['X']}\n"
+        #       f"E: {self.input_dims['E']}\n"
+        #       f"y: {self.input_dims['y']}\n")
+
+        # self.output_dims = {'X': example_batch['x'].size(1),
+        #                     'E': example_batch['edge_attr'].size(1),
+        #                     'y': 0}
+
         self.output_dims = {'X': example_batch['x'].size(1),
                             'E': example_batch['edge_attr'].size(1),
-                            'y': 0}
+                            'y': example_batch['y'].size(1)}
