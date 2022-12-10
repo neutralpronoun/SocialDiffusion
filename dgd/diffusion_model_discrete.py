@@ -554,6 +554,8 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
         z_T = diffusion_utils.sample_discrete_feature_noise(limit_dist=self.limit_dist, node_mask=node_mask)
         X, E, y = z_T.X, z_T.E, z_T.y
 
+        print(f"\nDiscrete feature input:\n {X, E, y}\n")
+
         assert (E == torch.transpose(E, 1, 2)).all()
         assert number_chain_steps < self.T
         chain_X_size = torch.Size((number_chain_steps, keep_chain, X.size(1)))
@@ -572,7 +574,7 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
             # Sample z_s
             sampled_s, discrete_sampled_s, predicted_graph = self.sample_p_zs_given_zt(t_norm, X, E, y, node_mask,
                                                                                        last_step=s_int==100)
-            X, E, y = sampled_s.X, sampled_s.E, sampled_s.y
+            X, E, y = sampled_s.X, sampled_s.E, y#sampled_s.y
             # print(f"X shape: {X.shape}\nE shape: {E.shape}\ny shape: {y.shape}\nDiscrete sampled s shape: {discrete_sampled_s.X.shape}\nKeep chain shape: {keep_chain}")
             # Save the first keep_chain graphs
             write_index = (s_int * number_chain_steps) // self.T
@@ -665,19 +667,22 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
         extra_data = self.compute_extra_data(noisy_data)
 
         # print(f"\nIn sample_p_zs...\n====================================================\n"
-        #       f"Noisy: {noisy_data['y_t']} {noisy_data['y_t'].shape}\n"
+        #       f"Y:\nNoisy: {noisy_data['y_t']} {noisy_data['y_t'].shape}\n"
         #       f"Extra: {extra_data.y} {extra_data.y.shape}\n"
+        #       f"X:\nNoisy: {noisy_data['X_t']} {noisy_data['X_t'].shape}\n"
+        #       f"Extra: {extra_data.X} {extra_data.X.shape}\n"
         #       f"====================================================\n")
 
         pred = self.forward(noisy_data, extra_data, node_mask)
 
         # print(f"\nIn sample_p_zs...\n====================================================\n"
-        #       f"Pred: {pred.y.shape}\n"
+        #       f"Pred: \nx: {pred.X}\ny: {pred.y}\n"
         #       f"====================================================\n")
 
         # Normalize predictions
         pred_X = F.softmax(pred.X, dim=-1)               # bs, n, d0
         pred_E = F.softmax(pred.E, dim=-1)               # bs, n, n, d0
+        pred_Y = F.softmax(pred.y, dim = -1)
 
         if last_step:
             predicted_graph = diffusion_utils.sample_discrete_features(pred_X, pred_E, node_mask=node_mask)
@@ -707,19 +712,29 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
         assert ((prob_X.sum(dim=-1) - 1).abs() < 1e-4).all()
         assert ((prob_E.sum(dim=-1) - 1).abs() < 1e-4).all()
 
-        sampled_s = diffusion_utils.sample_discrete_features(prob_X, prob_E, node_mask=node_mask)
+        if pred.y.numel() != 0:
+            sampled_s = diffusion_utils.sample_discrete_features(prob_X, prob_E, probY=pred_Y, node_mask=node_mask)
+        else:
+            sampled_s = diffusion_utils.sample_discrete_features(prob_X, prob_E, node_mask=node_mask)
+
+        # print(f"\nY_s shape before one-hot: {sampled_s.y.shape}\n")
+        # print(f"\nY_t shape before one-hot: {y_t.shape}\n")
 
         X_s = F.one_hot(sampled_s.X, num_classes=self.Xdim_output).float()
         E_s = F.one_hot(sampled_s.E, num_classes=self.Edim_output).float()
+        Y_s = F.one_hot(sampled_s.y, num_classes=self.ydim_output).float()
 
         assert (E_s == torch.transpose(E_s, 1, 2)).all()
-        assert (X_t.shape == X_s.shape) and (E_t.shape == E_s.shape)
+        assert (X_t.shape == X_s.shape) and (E_t.shape == E_s.shape)# and (y_t.shape == Y_s.shape)
 
         # out_one_hot = utils.PlaceHolder(X=X_s, E=E_s, y=torch.zeros(y_t.shape[0], 0))
         # out_discrete = utils.PlaceHolder(X=X_s, E=E_s, y=torch.zeros(y_t.shape[0], 0))
 
-        out_one_hot = utils.PlaceHolder(X=X_s, E=E_s, y=pred.y)#torch.zeros(y_t.shape[0], 0))
-        out_discrete = utils.PlaceHolder(X=X_s, E=E_s, y=pred.y)#torch.zeros(y_t.shape[0], 0))
+        # print(f"Shapes at end of P(zs|zt):\n"
+        #       f"X: {X_s.shape}, E: {E_s.shape}, Y: {Y_s.shape}")
+
+        out_one_hot = utils.PlaceHolder(X=X_s, E=E_s, y=Y_s)#torch.zeros(y_t.shape[0], 0))
+        out_discrete = utils.PlaceHolder(X=X_s, E=E_s, y=Y_s)#torch.zeros(y_t.shape[0], 0))
 
         return out_one_hot.mask(node_mask).type_as(y_t), out_discrete.mask(node_mask, collapse=True).type_as(y_t), \
                predicted_graph if last_step else None

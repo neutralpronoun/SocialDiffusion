@@ -253,10 +253,6 @@ def sample_discrete_features(probX, probE, node_mask, probY = None):
     X_t = probX.multinomial(1)                                  # (bs * n, 1)
     X_t = X_t.reshape(node_mask.size(0), node_mask.size(1))     # (bs, n)
 
-    # if probY is not None:
-    #     Y_t =
-
-
     # Noise E
     # The masked rows should define probability distributions as well
     inverse_edge_mask = ~(node_mask.unsqueeze(1) * node_mask.unsqueeze(2))
@@ -277,8 +273,17 @@ def sample_discrete_features(probX, probE, node_mask, probY = None):
     E_t = torch.triu(E_t, diagonal=1)
     E_t = (E_t + torch.transpose(E_t, 1, 2))
 
-    return PlaceHolder(X=X_t, E=E_t, y=torch.zeros(X_t.shape[0], 0).type_as(X_t))
 
+    if probY is not None:
+        ydim1, ydim2 = probY.size(0), probY.size(1)
+        probY[probY < 0.] = 0.
+        # probY = probY.reshape(ydim1*ydim2)
+        Y_t = probY.multinomial(1)
+    else:
+        Y_t = torch.zeros(X_t.shape[0], 0).type_as(X_t)
+
+    # return PlaceHolder(X=X_t, E=E_t, y=torch.zeros(X_t.shape[0], 0).type_as(X_t))
+    return PlaceHolder(X=X_t, E=E_t, y=Y_t.type_as(X_t))
 
 def compute_posterior_distribution(M, M_t, Qt_M, Qsb_M, Qtb_M):
     ''' M: X or E
@@ -368,7 +373,7 @@ def sample_discrete_feature_noise(limit_dist, node_mask):
     e_limit[e_limit < 0] = 0.
     U_E = e_limit.flatten(end_dim=-2).multinomial(1).reshape(bs, n_max, n_max)
 
-    print(x_limit.shape, y_limit, y_limit.shape)
+    # print(x_limit, x_limit.shape, y_limit, y_limit.shape)
     if y_limit.numel() > 0:
         U_y = y_limit.flatten(end_dim=-2).multinomial(1).reshape(bs)
     else:

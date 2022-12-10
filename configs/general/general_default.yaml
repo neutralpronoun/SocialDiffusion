@@ -8,10 +8,10 @@ gpus: 1                     # Multi-gpu is not implemented on this branch
 resume: null            # If resume, path to ckpt file from outputs directory in main directory
 test_only: null # "/home/alex/Projects/SocialDiffusion/outputs/2022-11-09/18-10-14/checkpoints/graph-tf-model/epoch=183.ckpt"  # alt is null         # Use absolute path
 
-check_val_every_n_epochs: 5
-sample_every_val: 5
+check_val_every_n_epochs: 2
+sample_every_val: 10
 val_check_interval: null
-samples_to_generate: 64       # We advise to set it to 2 x batch_size maximum
+samples_to_generate: 16       # We advise to set it to 2 x batch_size maximum
 samples_to_save: 16
 chains_to_save: 8
 log_every_steps: 5
