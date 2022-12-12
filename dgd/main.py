@@ -48,7 +48,7 @@ import utils
 from datasets import guacamol_dataset, qm9_dataset#, moses_dataset
 # from datasets import ego_dataset
 from datasets.spectre_dataset import SBMDataModule, Comm20DataModule, PlanarDataModule, SpectreDatasetInfos
-from datasets import ego_dataset, fb_dataset, github_dataset, github_h2, fb_h2
+from datasets import ego_dataset, fb_dataset, github_dataset, github_h2, fb_h2, fb_hierarchies
 
 
 from metrics.abstract_metrics import TrainAbstractMetricsDiscrete, TrainAbstractMetrics
@@ -131,7 +131,7 @@ def main(cfg: DictConfig):
     cfg = setup_wandb(cfg)
 
 
-    if dataset_config["name"] in ["ego", "fb", "fb_h2", "github", "github_subsample", "github_h2"]:
+    if dataset_config["name"] in ["ego", "fb", "fb_h2", "fb_hierarchies", "github", "github_subsample", "github_h2"]:
         if dataset_config["name"] == "ego":
             # print("\nRecognised ego dataset\n")
             datamodule = ego_dataset.EGODataModule(cfg)
@@ -165,6 +165,13 @@ def main(cfg: DictConfig):
 
         elif dataset_config["name"] == "fb_h2":
             datamodule = fb_h2.FBH2DataModule(cfg)
+            datamodule.prepare_data()
+            sampling_metrics = FBSamplingMetrics(datamodule.dataloaders)
+            dataset_infos = fb_dataset.FBDatasetInfos(datamodule,
+                                                        dataset_config)  # SpectreDatasetInfos(datamodule, dataset_config)
+
+        elif dataset_config["name"] == "fb_hierarchies":
+            datamodule = fb_hierarchies.FBHierarchiesDataModule(cfg)
             datamodule.prepare_data()
             sampling_metrics = FBSamplingMetrics(datamodule.dataloaders)
             dataset_infos = fb_dataset.FBDatasetInfos(datamodule,

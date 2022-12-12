@@ -63,7 +63,7 @@ class FBH2Dataset(InMemoryDataset):
 
     def __init__(self, stage, root, remove_h: bool, transform=None,
                  pre_transform=None, pre_filter=None, subsample = False,
-                 max_size = 100, resolution = 20, n_samples = 240, n_workers = 4):
+                 max_size = 100, resolution = 20, n_samples = 4, n_workers = 4):
         print("\nStarting FB dataset init\n")
         self.stage = stage
         if self.stage == 'train':
@@ -137,12 +137,13 @@ class FBH2Dataset(InMemoryDataset):
             sampler = MetropolisHastingsRandomWalkSampler(10000)
             G = sampler.sample(G)
             print(f"Loaded: {G}")
-        print(f"Finding communities with a resolution of {self.resolution}")
+
+        print(f"Finding communities {self.n_samples} times with a resolution of {self.resolution}")
         self.partitions = []
         sample_call_list = range(self.n_samples)
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.n_workers) as executor:
             future_to_partition = {executor.submit(self.communities_split, G): i for i in sample_call_list}
-            for future in concurrent.futures.as_completed(future_to_partition):
+            for future in tqdm(concurrent.futures.as_completed(future_to_partition)):
                 partition = future.result()
                 try:
                     self.partitions.append(partition)
@@ -150,6 +151,7 @@ class FBH2Dataset(InMemoryDataset):
                 except:
                     print(f"Failed with partition {partition}")
 
+        print(self.partitions)
         with open(self.raw_paths[1], "wb") as handle:
             pickle.dump(self.partitions, handle, protocol=pickle.HIGHEST_PROTOCOL)
 

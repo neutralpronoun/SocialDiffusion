@@ -137,6 +137,7 @@ class FBDataset(InMemoryDataset):
         for i in tqdm(range(self.n_reps)):
             self.communities_split(G)
 
+        print(self.partition)
 
         with open(self.raw_paths[0], 'w') as f:
             json.dump(self.partition, f)

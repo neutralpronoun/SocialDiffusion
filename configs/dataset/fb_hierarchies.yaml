@@ -1,0 +1,9 @@
+name: 'fb_hierarchies'            # ego, ego_positional
+datadir: 'data/fb/'
+h: 1
+random_subset: null
+pin_memory: False
+subsample: False
+resolution: 5
+max_size: 300
+dataset_testing: False
