@@ -62,7 +62,7 @@ class FBHierarchiesDataset(InMemoryDataset):
 
     def __init__(self, stage, root, transform=None,
                  pre_transform=None, pre_filter=None, subsample=False, h = 1,
-                 max_size=100, resolution=20, n_samples=120, n_workers=4):
+                 max_size=100, resolution=20, n_samples=24, n_workers=4):
         print("\nStarting FB dataset init\n")
         self.stage = stage
         if self.stage == 'train':
@@ -484,9 +484,9 @@ class FBHierarchiesDataset(InMemoryDataset):
                 result_path = os.path.join(current_path,
                                            f'graphs/real_communities_h1')
                 visualization_tools.visualize(result_path, graphs_h1_plotting, min(15, len(graphs_h1_plotting)),
-                                              node_types = node_types)
+                                              node_types = node_types, log = "h1_Real")
                 visualization_tools.visualize_grid(result_path, graphs_h1_plotting, min(15, len(graphs_h1_plotting)),
-                                              node_types=node_types, log = "h1_real")
+                                              node_types=node_types, log = "h1_Real")
 
         elif self.h == 1.5:
 
@@ -613,9 +613,9 @@ class FBHierarchiesDataset(InMemoryDataset):
                 result_path = os.path.join(current_path,
                                            f'graphs/real_communities_X')
                 visualization_tools.visualize(result_path, graphs_plotting, min(15, len(graphs_plotting)),
-                                              node_types = node_types, largest_component = False)
+                                              node_types = node_types, largest_component = False, log = "X_Real")
                 visualization_tools.visualize_grid(result_path, graphs_plotting, min(15, len(graphs_plotting)),
-                                              node_types=node_types, log = "Community_Pairs_X", largest_component = False)
+                                              node_types=node_types, log = "Community_Pairs_X_Real", largest_component = False)
 
             data_list = []
             all_nodes = []
@@ -709,9 +709,9 @@ class FBHierarchiesDataset(InMemoryDataset):
                 result_path = os.path.join(current_path,
                                            f'graphs/real_communities_Y')
                 visualization_tools.visualize(result_path, graphs_plotting, min(15, len(graphs_plotting)),
-                                              node_types = node_types)
+                                              node_types = node_types, log = "Y_Real")
                 visualization_tools.visualize_grid(result_path, graphs_plotting, min(15, len(graphs_plotting)),
-                                              node_types=node_types, log = "Community_Pairs_Y", largest_component = False)
+                                              node_types=node_types, log = "Community_Pairs_Y_Real", largest_component = False)
 
 
 
@@ -829,9 +829,9 @@ class FBHierarchiesDataset(InMemoryDataset):
                 # Visualize the final molecules
                 current_path = os.getcwd()
                 result_path = os.path.join(current_path,
-                                           f'graphs/real_communities_h1')
+                                           f'graphs/real_communities_h2')
                 visualization_tools.visualize(result_path, graphs_h2_plotting, min(15, len(graphs_h2_plotting)),
-                                              node_types = node_types)
+                                              node_types = node_types, log = "h2_real", node_size = 50)
                 visualization_tools.visualize_grid(result_path, graphs_h2_plotting, min(15, len(graphs_h2_plotting)),
                                               node_types=node_types, log = "h2_real")
 

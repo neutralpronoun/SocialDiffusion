@@ -29,7 +29,7 @@ def LargeGraphVisualization(G, partition):
     result_path = os.path.join(current_path,
                                f'graphs/train_communities/all_communities.png')
 
-    plt.savefig(result_path)
+    plt.savefig(result_path, dpi = 300)
 
 class MolecularVisualization:
     def __init__(self, remove_h, dataset_infos):
@@ -198,7 +198,7 @@ class NonMolecularVisualization:
                 cmap=plt.cm.coolwarm, vmin=vmin, vmax=vmax, edge_color='grey')
 
         plt.tight_layout()
-        plt.savefig(path)
+        plt.savefig(path, dpi = 300)
         plt.close("all")
 
     def visualize(self, path: str, graphs: list, num_graphs_to_visualize: int, log='graph', trainer=None):
@@ -302,7 +302,7 @@ class DiscreteNodeTypeVisualization:
         # nx.draw(graph, pos, font_size=5, node_size=node_size, with_labels=False, node_color=colors,
         #         cmap=plt.cm.coolwarm, vmin=vmin, vmax=vmax, edge_color='grey')
 
-        nx.draw_networkx_nodes(graph, pos, node_size=node_size, node_color=colors, vmin=vmin, vmax=vmax, ax = ax, edgecolors="black", cmap = "Set1")
+        nx.draw_networkx_nodes(graph, pos, node_size=node_size, node_color=colors, vmin=vmin, vmax=vmax, ax = ax, edgecolors="black", cmap = "tab10")
         if len(set(ecolors)) != 1:
             nx.draw_networkx_edges(graph, pos, node_size=node_size, edge_color=ecolors, edge_vmin=evmin, edge_vmax=evmax, ax = ax)
         else:
@@ -313,7 +313,7 @@ class DiscreteNodeTypeVisualization:
         else:
             # print(f"Plotting graph at {path}")
             plt.tight_layout()
-            plt.savefig(path)
+            plt.savefig(path, dpi = 300)
             plt.close("all")
 
     def visualize(self, path: str, graphs: list, num_graphs_to_visualize: int, log='graph', trainer=None):
@@ -324,7 +324,8 @@ class DiscreteNodeTypeVisualization:
 
         # visualize the final molecules
         for i in range(num_graphs_to_visualize):
-            file_path = os.path.join(path, 'graph_{}.png'.format(i))
+            # file_path = os.path.join(path, 'graph_{}.png'.format(i))
+            file_path = os.path.join(path, f"{log}_graph_{i}.png")
             graph = self.to_networkx(graphs[i][0].numpy(), graphs[i][1].numpy())
             self.visualize_non_molecule(graph=graph, pos=None, path=file_path)
             im = plt.imread(file_path)
@@ -349,7 +350,8 @@ class DiscreteNodeTypeVisualization:
         # visualize the final molecules
         for i in tqdm(range(num_graphs_to_visualize)):
             ax = axes[i]
-            file_path = os.path.join(path, 'graph_{}.png'.format(i))
+            # file_path = os.path.join(path, 'graph_{}.png'.format(i))
+            file_path = os.path.join(path, f"{log}_graph_{i}.png")
             graph = self.to_networkx(graphs[i][0].numpy(), graphs[i][1].numpy())
             ax = self.visualize_non_molecule(graph=graph, pos=None, path=file_path, ax = ax)
             # im = plt.imread(file_path)
@@ -357,7 +359,7 @@ class DiscreteNodeTypeVisualization:
         print(file_path)
         file_path = os.path.join(path, 'graph_grid.png')
         plt.tight_layout()
-        plt.savefig(file_path)
+        plt.savefig(file_path, dpi = 300)
         plt.close("all")
         im = plt.imread(file_path)
         wandb.log({log: [wandb.Image(im, caption=file_path)]})
@@ -451,11 +453,16 @@ class TrainDiscreteNodeTypeVisualization:
         # nx.draw(graph, pos, font_size=5, node_size=node_size, with_labels=False, node_color=colors,
         #         cmap=plt.cm.coolwarm, vmin=vmin, vmax=vmax, edge_color='grey')
 
-        nx.draw_networkx_nodes(graph, pos, node_size=node_size, node_color=colors, vmin=vmin, vmax=vmax, ax = ax, edgecolors="black", cmap = "Set1")
-        if len(set(ecolors)) != 1:
-            nx.draw_networkx_edges(graph, pos, node_size=node_size, edge_color=ecolors, edge_vmin=evmin, edge_vmax=evmax, ax = ax)
+        if node_size > 15:
+            alpha = 0.25
         else:
-            nx.draw_networkx_edges(graph, pos, node_size=node_size, ax = ax)
+            alpha = 0.75
+
+        nx.draw_networkx_nodes(graph, pos, node_size=node_size, node_color=colors, vmin=vmin, vmax=vmax, ax = ax, edgecolors="black", cmap = "tab10")
+        if len(set(ecolors)) != 1:
+            nx.draw_networkx_edges(graph, pos, node_size=node_size, edge_color=ecolors, edge_vmin=evmin, edge_vmax=evmax, ax = ax, alpha=alpha)
+        else:
+            nx.draw_networkx_edges(graph, pos, node_size=node_size, ax = ax, alpha=alpha)
 
         # print(was_given_ax)
         if was_given_ax:
@@ -463,11 +470,11 @@ class TrainDiscreteNodeTypeVisualization:
         else:
             # print(f"Plotting graph at {path}")
             plt.tight_layout()
-            plt.savefig(path)
+            plt.savefig(path, dpi = 300)
             plt.close("all")
 
     def visualize(self, path: str, graphs: list, num_graphs_to_visualize: int, node_types = None,
-                  edge_types = None,  log='graph', trainer=None, largest_component = True):
+                  edge_types = None,  log='graph', trainer=None, largest_component = True, node_size = 15):
         # TODO: implement the multi-gpu case
         # define path to save figures
         if not os.path.exists(path):
@@ -475,13 +482,14 @@ class TrainDiscreteNodeTypeVisualization:
         graphs = self.add_attributes(graphs, node_types = node_types, edge_types = edge_types)
         # visualize the final molecules
         for i in range(num_graphs_to_visualize):
-            file_path = os.path.join(path, 'graph_{}.png'.format(i))
+            # file_path = os.path.join(path, 'graph_{}.png'.format(i))
+            file_path = os.path.join(path, f"{log}_graph_{i}.png")
             # graph = self.to_networkx(graphs[i][0].numpy(), graphs[i][1].numpy())
             graph = graphs[i]
 
 
 
-            self.visualize_non_molecule(graph=graph, pos=None, path=file_path, largest_component=largest_component)
+            self.visualize_non_molecule(graph=graph, pos=None, path=file_path, largest_component=largest_component, node_size=node_size)
             im = plt.imread(file_path)
             wandb.log({log: [wandb.Image(im, caption=file_path)]})
 
@@ -508,14 +516,15 @@ class TrainDiscreteNodeTypeVisualization:
         for i in tqdm(range(num_graphs_to_visualize - 1)):
             ax = axes[i]
             graph = graphs[i]
-            file_path = os.path.join(path, 'graph_{}.png'.format(i))
+            # file_path = os.path.join(path, 'graph_{}.png'.format(i))
+            file_path = os.path.join(path, f"{log}_graph_{i}.png")
             # graph = self.to_networkx(graphs[i][0].numpy(), graphs[i][1].numpy())
             self.visualize_non_molecule(graph=graph, pos=None, path=file_path, ax = ax, largest_component=largest_component)
             # im = plt.imread(file_path)
         file_path = os.path.join(path, 'graph_grid.png')
         print(file_path)
         plt.tight_layout()
-        plt.savefig(file_path)
+        plt.savefig(file_path, dpi = 300)
         plt.close("all")
         im = plt.imread(file_path)
         wandb.log({log: [wandb.Image(im, caption=file_path)]})
