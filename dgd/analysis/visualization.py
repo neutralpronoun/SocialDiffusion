@@ -302,7 +302,7 @@ class DiscreteNodeTypeVisualization:
         # nx.draw(graph, pos, font_size=5, node_size=node_size, with_labels=False, node_color=colors,
         #         cmap=plt.cm.coolwarm, vmin=vmin, vmax=vmax, edge_color='grey')
 
-        nx.draw_networkx_nodes(graph, pos, node_size=node_size, node_color=colors, vmin=vmin, vmax=vmax, ax = ax, edgecolors="black")
+        nx.draw_networkx_nodes(graph, pos, node_size=node_size, node_color=colors, vmin=vmin, vmax=vmax, ax = ax, edgecolors="black", cmap = "Set1")
         if len(set(ecolors)) != 1:
             nx.draw_networkx_edges(graph, pos, node_size=node_size, edge_color=ecolors, edge_vmin=evmin, edge_vmax=evmax, ax = ax)
         else:
@@ -451,7 +451,7 @@ class TrainDiscreteNodeTypeVisualization:
         # nx.draw(graph, pos, font_size=5, node_size=node_size, with_labels=False, node_color=colors,
         #         cmap=plt.cm.coolwarm, vmin=vmin, vmax=vmax, edge_color='grey')
 
-        nx.draw_networkx_nodes(graph, pos, node_size=node_size, node_color=colors, vmin=vmin, vmax=vmax, ax = ax, edgecolors="black")
+        nx.draw_networkx_nodes(graph, pos, node_size=node_size, node_color=colors, vmin=vmin, vmax=vmax, ax = ax, edgecolors="black", cmap = "Set1")
         if len(set(ecolors)) != 1:
             nx.draw_networkx_edges(graph, pos, node_size=node_size, edge_color=ecolors, edge_vmin=evmin, edge_vmax=evmax, ax = ax)
         else:
